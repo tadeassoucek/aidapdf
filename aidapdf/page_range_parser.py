@@ -44,6 +44,9 @@ class PageRange(RangeStringToken):
     def __repr__(self):
         return f'PageRange({self.start}, {self.end})'
 
+    def __eq__(self, other: 'PageRange') -> bool:
+        return self.start == other.start and self.end == other.end
+
 
 def _is_num(s: str) -> bool:
     return s.isdigit() or (s[0] == '^' and s[1:].isdigit())

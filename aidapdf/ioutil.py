@@ -61,8 +61,7 @@ class PdfFile:
             raise AidaInternalException("interactor either not instantiated or isn't a writer")
         log_action("emit " + str(self))
         if self.path.exists(follow_symlinks=True) and not Config.FORCE_OVERWRITE:
-            print(f"?? {repr(str(self.path))} already exists. [o]verwrite or [C]ancel?")
-            action = input("?? ")
+            action = input(repr(str(self.path)) + " already exists. [o]verwrite or [C]ancel? : ")
             if action.strip().lower() != 'o':
                 raise AidaIoException(f"couldn't overwrite {repr(str(self.path))}; choose a different output file")
         self.interactor.write(self.path)
@@ -80,4 +79,9 @@ class PdfFile:
         return repr(str(self.path)) + page_string
 
     def __repr__(self):
-        return 'PdfFile(' + repr(str(self.path)) + ';' + prp.range_to_str(self.page_ranges) + "')"
+        if len(self.page_ranges) == 1 and self.page_ranges[0] == prp.PageRange(1, -1):
+            page_range_str = ""
+        else:
+            page_range_str = ';' + prp.range_to_str(self.page_ranges)
+
+        return 'PdfFile(' + repr(str(self.path)) + page_range_str + ")"
