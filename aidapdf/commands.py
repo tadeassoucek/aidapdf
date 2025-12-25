@@ -1,6 +1,8 @@
 import argparse
+from pathlib import Path
+from pprint import pprint
 
-from pypdf.errors import FileNotDecryptedError, WrongPasswordError
+from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
 from aidapdf.file import PdfOutFile, PdfFile, parse_file_specifier
 from aidapdf.log import Logger
@@ -41,4 +43,47 @@ def copy(args: argparse.Namespace) -> bool:
     except FileNotDecryptedError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (no password provided)")
         return False
+    except PdfReadError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]}")
+        return False
+    return True
+
+def split(args: argparse.Namespace) -> bool:
+    if args.count <= 0:
+        _logger.err(f"count must be larger than 0 (is {args.count})")
+
+    _logger.log(f"split {repr(args.file)} count {args.count} " +
+                f"(owner_password={repr(args.owner_password)})")
+
+    (filename, page_spec, password) = parse_file_specifier(args.file)
+    fp = Path(filename)
+    template = args.output_file_template or "{dir}/{name}-{i}.pdf"
+
+    try:
+        file = PdfFile(filename, page_spec, password)
+        if args.count > file.get_page_count():
+            _logger.err(f"count must be smaller or equal to the page count ({args.count} > {file.get_page_count()})")
+
+        outfiles: list[PdfOutFile] = []
+        for i in range(args.count):
+            outfiles.append(PdfOutFile(template.format(dir=fp.parent, name=fp.stem, ext=fp.suffix, i=i+1), file))
+            _logger.info(f"output file {i+1}: {outfiles[-1]}")
+
+        i = 0
+        for page in file.get_pages():
+            outfiles[i % args.count].get_writer_unsafe().add_page(page)
+            i += 1
+
+        for f in outfiles:
+            f.finalize(file.get_metadata() if args.copy_metadata else None, args.owner_password)
+    except WrongPasswordError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
+        return False
+    except FileNotDecryptedError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]} (no password provided)")
+        return False
+    except PdfReadError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]}")
+        return False
+
     return True

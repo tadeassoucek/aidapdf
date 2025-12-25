@@ -13,5 +13,8 @@ class Logger:
     def log(self, message: str, **kwargs) -> None:
         self._log(message, "LOG", **kwargs)
 
+    def info(self, message: str, **kwargs) -> None:
+        self._log(message, "INFO", **kwargs)
+
     def err(self, message: str, **kwargs) -> None:
         self._log(message, "ERR", **kwargs)

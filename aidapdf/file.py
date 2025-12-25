@@ -72,6 +72,13 @@ class PdfOutFile:
             yield self._writer
         finally:
             self.finalize(metadata, owner_password)
+            self._writer = None
+
+    def get_writer_unsafe(self) -> PdfWriter:
+        if self._writer is not None:
+            return self._writer
+        self._writer = PdfWriter()
+        return self._writer
 
     def finalize(self, metadata: dict[str, Any] | None, owner_password: str | None = None) -> None:
         if owner_password or self.owner.password:
