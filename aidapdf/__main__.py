@@ -1,34 +1,30 @@
 import argparse
 
-from aidapdf.file import PdfFile
-from aidapdf.pagespecparser import PageSpec
-
-
-def pagecount_fn(args: argparse.Namespace):
-    print(args.terse, args.files)
-
-
-def parsepagespec_fn(args: argparse.Namespace):
-    pagespec = PageSpec.parse(args.spec)
-    print(pagespec)
-    print(pagespec.bake(PdfFile(20)))
+from aidapdf import commands
 
 
 def main():
     parser = argparse.ArgumentParser("aidapdf")
-    commands = parser.add_subparsers()
+    sub = parser.add_subparsers()
 
-    parsepagespec_command = commands.add_parser('parsepagespec')
+    parsepagespec_command = sub.add_parser('parsepagespec')
     parsepagespec_command.add_argument('spec')
-    parsepagespec_command.set_defaults(func=parsepagespec_fn)
+    parsepagespec_command.set_defaults(func=commands.parse_page_spec)
 
-    pagecount_command = commands.add_parser("pagecount")
+    pagecount_command = sub.add_parser("pagecount")
     pagecount_command.add_argument("files", nargs="+")
     pagecount_command.add_argument("-t", "--terse", action="store_true")
-    pagecount_command.set_defaults(func=pagecount_fn)
+    pagecount_command.set_defaults(func=commands.page_count)
+
+    copy_command = sub.add_parser("copy", aliases=["c"])
+    copy_command.add_argument("file")
+    copy_command.add_argument("pages", nargs="?")
+    copy_command.add_argument("-o", "--output-file")
+    copy_command.add_argument("-p", "--owner-password", nargs="?")
+    copy_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction)
+    copy_command.set_defaults(func=commands.copy)
 
     args = parser.parse_args()
-    print(args)
     args.func(args)
 
 if __name__ == '__main__':
