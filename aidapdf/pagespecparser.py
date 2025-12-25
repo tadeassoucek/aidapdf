@@ -75,8 +75,6 @@ class PageSpec:
     @staticmethod
     def parse(text: str) -> 'PageSpec':
         toks = _lex(text)
-        print("Lexer output: ", end='')
-        pprint(toks)
         toktype = None
         res: list[PageSpecToken] = []
         parsing_condition = False

@@ -1,6 +1,8 @@
 import argparse
+import sys
 from pathlib import Path
 from pprint import pprint
+from typing import Any
 
 from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
@@ -39,6 +41,29 @@ def parse_page_spec(args: argparse.Namespace):
 
         if args.spec:
             break
+
+
+def info(args: argparse.Namespace):
+    def print_target(target: str, prefix: str, value: Any):
+        if target in args.targets:
+            print(prefix + ':', value)
+
+    file = PdfFile(*parse_file_specifier(args.file))
+    pages = file.get_page_count()
+    print_target("pages", "Pages", pages)
+    print_target("metadata", "Metadata", file.get_metadata())
+    file.finalize()
+
+
+def extract(args: argparse.Namespace):
+    tup = parse_file_specifier(args.file)
+    stream = open(args.output_file, mode='w+') if args.output_file else sys.stdout
+    file = PdfFile(*tup)
+    for page in file.get_pages():
+        print(page.extract_text(extraction_mode=args.extract_mode), file=stream)
+    file.finalize()
+    if args.output_file:
+        stream.close()
 
 
 def copy(args: argparse.Namespace) -> bool:

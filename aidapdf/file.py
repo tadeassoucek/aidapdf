@@ -3,6 +3,7 @@ from os import PathLike
 from typing import Iterator, Generator, Tuple, Any
 
 from pypdf import PdfReader, PageObject, PdfWriter
+from pypdf.generic import IndirectObject
 
 from aidapdf.log import Logger
 from aidapdf.pagespecparser import PageSpec
@@ -43,7 +44,13 @@ class PdfFile:
         _logger.dbug(f"closed {self}")
 
     def get_metadata(self) -> dict[str, Any]:
-        return self._reader.metadata
+        meta_raw = self._reader.metadata
+        meta = {}
+        for k, v in meta_raw.items():
+            if k.startswith('/'):
+                k = k[1:]
+            meta[k] = str(v) if isinstance(v, IndirectObject) else v
+        return meta
 
     def get_page_count(self) -> int:
         return len(self._reader.pages)
