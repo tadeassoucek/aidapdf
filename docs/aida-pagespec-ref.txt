@@ -1,0 +1,14 @@
+spec := <token> ( "," <token> )+
+
+token := <num> | <range>
+
+num := [ "^" ] ( "0".."9" )+
+
+range := [ "*" | <num> "-" <num> ] "(" [ condition ] ")"
+      := [ condition ]          // = "*(" <condition> ")"
+
+condition := <keyword> [ <op> <condition> ]
+
+keyword := "odd" | "even"
+
+op := "or" | "and"

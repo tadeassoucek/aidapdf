@@ -4,7 +4,8 @@
 
 import string
 import abc
-from typing import Iterator, TYPE_CHECKING
+from pprint import pprint
+from typing import Iterator, TYPE_CHECKING, Callable, Any
 
 from aidapdf.log import Logger
 
@@ -38,18 +39,32 @@ class PageSpecNumberToken(PageSpecToken):
         return _ntos(self.number)
 
 
+class PageSpecCondition:
+    def __init__(self, condition_fn: Callable[[int], bool]):
+        self.condition_fn = condition_fn
+
+
 class PageSpecRangeToken(PageSpecToken):
+    ALL: 'PageSpecRangeToken'
+
     def __init__(self, start: int, end: int = -1):
         self.start = start
         self.end = end
+        self.condition: PageSpecCondition | None = None
 
     def bake(self, file: 'PdfFile'):
         start = self.start - 1 if self.start >= 0 else file.get_page_count() + self.start
         end = self.end - 1 if self.end >= 0 else file.get_page_count() + self.end
-        return list(range(start, end+1))
+        if self.condition:
+            return list(filter(self.condition.condition_fn, range(start, end+1)))
+        else:
+            return list(range(start, end+1))
 
     def __str__(self):
-        return _ntos(self.start) + "-" + _ntos(self.end)
+        return _ntos(self.start) + "-" + _ntos(self.end) + ('?' if self.condition else '')
+
+
+PageSpecRangeToken.ALL = PageSpecRangeToken(1)
 
 
 class PageSpec:
@@ -60,35 +75,69 @@ class PageSpec:
     @staticmethod
     def parse(text: str) -> 'PageSpec':
         toks = _lex(text)
+        print("Lexer output: ", end='')
+        pprint(toks)
         toktype = None
         res: list[PageSpecToken] = []
+        parsing_condition = False
+        condition: PageSpecCondition | None = None
 
-        i = 0
         for tok in toks:
-            if type(tok) is str:
-                if tok == ',':
-                    toktype = None
-                elif tok == '-':
-                    last = res[-1]
-                    if isinstance(last, PageSpecNumberToken):
-                        toktype = PageSpecRangeToken
-                        res[-1] = PageSpecRangeToken(last.number)
-                    else:
-                        raise PageSpecParserException(f"invalid token # {i}")
-            elif type(tok) is int:
-                if toktype is None:
-                    res.append(PageSpecNumberToken(tok))
-                elif toktype is PageSpecRangeToken:
-                    rng = res[-1]
-                    assert isinstance(rng, PageSpecRangeToken)
-                    rng.end = tok
-                else:
-                    raise PageSpecParserException(f"invalid token # {i}")
+            assert type(tok) is str or type(tok) is int
 
-            i += 1
+            if parsing_condition:
+                if type(tok) is str:
+                    if tok == ')':
+                        parsing_condition = False
+                        last = res[-1]
+                        if isinstance(last, PageSpecRangeToken):
+                            last.condition = condition
+                        else:
+                            raise PageSpecParserException(f"invalid token {repr(tok)}")
+                    elif tok == 'even':
+                        condition = PageSpecCondition(lambda x: x % 2 == 1)
+                    elif tok == 'odd':
+                        condition = PageSpecCondition(lambda x: x % 2 == 0)
+                    else:
+                        raise PageSpecParserException(f"invalid or unspecified condition expression: {repr(tok)}")
+                else:
+                    raise PageSpecParserException(f"can't have numbers in condition expression: {repr(tok)}")
+            else:
+                if type(tok) is str:
+                    if tok == ',':
+                        toktype = None
+                    elif tok == '-':
+                        last = res[-1]
+                        if isinstance(last, PageSpecNumberToken):
+                            toktype = PageSpecRangeToken
+                            res[-1] = PageSpecRangeToken(last.number)
+                        else:
+                            raise PageSpecParserException(f"invalid token {repr(tok)}")
+                    elif tok == '*':
+                        if toktype is None:
+                            res.append(PageSpecRangeToken.ALL)
+                            toktype = PageSpecRangeToken
+                        else:
+                            raise PageSpecParserException(f"invalid token {repr(tok)}")
+                    elif tok == '(':
+                        if toktype is PageSpecRangeToken and not parsing_condition:
+                            parsing_condition = True
+                        else:
+                            raise PageSpecParserException(f"invalid token {repr(tok)}; must follow condition and can't nest")
+                    else:
+                        raise PageSpecParserException(f"invalid token {repr(tok)}")
+                elif type(tok) is int:
+                    if toktype is None:
+                        res.append(PageSpecNumberToken(tok))
+                    elif toktype is PageSpecRangeToken:
+                        rng = res[-1]
+                        assert isinstance(rng, PageSpecRangeToken)
+                        rng.end = tok
+                    else:
+                        raise PageSpecParserException(f"invalid token {repr(tok)}")
 
         ret = PageSpec(res)
-        PageSpec.LOGGER.log(f"parsed spec `{text}`: {ret}")
+        PageSpec.LOGGER.dbug(f"parsed spec `{text}`: {ret}")
         return ret
 
     def __init__(self, tokens: list[PageSpecToken]):
@@ -104,36 +153,81 @@ class PageSpec:
         return "PageSpec(" + ", ".join(map(str, self.tokens)) + ")"
 
 
-PageSpec.ALL = PageSpec([PageSpecRangeToken(1)])
+PageSpec.ALL = PageSpec([PageSpecRangeToken.ALL])
 
+READING_ANY = 0
+READING_NUM = 1
+READING_ID = 2
 
 def _lex(text: str) -> list[str | int]:
+    reading = READING_ANY
+    tok = ""
     toks: list[str | int] = []
-    tok: str = ""
+
+    def _push(t: str):
+        nonlocal reading
+        if t:
+            if reading == READING_NUM:
+                t = int(t)
+            PageSpec.LOGGER.dbug(f"pushed token {repr(t)}")
+            toks.append(t)
+        reading = READING_ANY
+
+    def push_and_clear(*ts):
+        nonlocal reading, tok
+        if not ts: raise Exception("no tokens supplied")
+        for t in ts:
+            _push(t)
+        tok = ""
+
+    parenthesis_depth = 0
+
     i = 0
     for c in text:
         if c == ',':
-            if tok:
-                toks.append(int(tok))
-                toks.append(',')
-                tok = ""
-            else:
-                raise PageSpecParserException(f"double comma @ {i}")
-        elif c == '^':
-            if not tok:
-                tok = "-"
-            else:
-                raise PageSpecParserException(f"invalid char ^ @ {i}")
-        elif c == '-':
-            toks.append(int(tok))
-            toks.append('-')
-            tok = ""
+            push_and_clear(tok, ',')
         elif c in string.digits:
+            reading = READING_NUM
             tok += c
+        elif c == '^':
+            reading = READING_NUM
+            tok += '-'
+        elif c == '-':
+            if reading == READING_NUM:
+                push_and_clear(tok, '-')
+                reading = READING_NUM
+            else:
+                raise PageSpecParserException(f"invalid char {repr(c)} # {i}")
+        elif c == '*':
+            if reading == READING_ANY:
+                push_and_clear('*')
+            else:
+                raise PageSpecParserException(f"invalid char {repr(c)} # {i}")
+        elif c == '(':
+            push_and_clear(tok, '(')
+            parenthesis_depth += 1
+        elif c == ')':
+            push_and_clear(tok, ')')
+            if parenthesis_depth <= 0:
+                raise PageSpecParserException(f"invalid char {repr(c)} # {i} (no parenthesis to close)")
+            parenthesis_depth -= 1
+        elif c in string.ascii_letters:
+            if reading == READING_ANY or reading == READING_ID:
+                reading = READING_ID
+                tok += c
+            else:
+                raise PageSpecParserException(f"invalid char {repr(c)} # {i}")
+        elif c in string.whitespace:
+            push_and_clear(tok)
+        else:
+            raise PageSpecParserException(f"invalid char {repr(c)} # {i}")
 
         i += 1
 
+    if parenthesis_depth > 0:
+        raise PageSpecParserException(str(parenthesis_depth) + " unclosed parenthes" + ("is" if parenthesis_depth == 1 else "es"))
+
     if tok:
-        toks.append(int(tok))
+        push_and_clear(tok)
 
     return toks

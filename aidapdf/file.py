@@ -29,7 +29,7 @@ class PdfFile:
         self.page_spec: PageSpec = PageSpec.parse(page_spec) if page_spec else PageSpec.ALL
         self.password = password
         self._reader = PdfReader(self.filename, password=self.password)
-        _logger.log(f"created {self}")
+        _logger.dbug(f"created {self}")
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
@@ -40,7 +40,7 @@ class PdfFile:
 
     def finalize(self):
         self._reader.close()
-        _logger.log(f"closed {self}")
+        _logger.dbug(f"closed {self}")
 
     def get_metadata(self) -> dict[str, Any]:
         return self._reader.metadata
@@ -62,7 +62,7 @@ class PdfOutFile:
         self.filename = filename
         self.owner = owner
         self._writer: PdfWriter | None = None
-        _logger.log(f"created {self}")
+        _logger.dbug(f"created {self}")
 
     # Generator[yield_type, send_type, return_type]
     @contextmanager
@@ -86,7 +86,7 @@ class PdfOutFile:
         if metadata: self._writer.add_metadata(metadata)
         self._writer.write(self.filename)
         self._writer.close()
-        _logger.log(f"closed {self}: owner_password={repr(owner_password)}")
+        _logger.dbug(f"closed {self}: owner_password={repr(owner_password)}")
 
     def __repr__(self) -> str:
         return f"PdfOutFile(filename={repr(self.filename)}, owner={self.owner})"

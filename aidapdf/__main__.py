@@ -8,7 +8,8 @@ def main():
     sub = parser.add_subparsers()
 
     parsepagespec_command = sub.add_parser('parsepagespec')
-    parsepagespec_command.add_argument('spec')
+    parsepagespec_command.add_argument('spec', nargs="?")
+    parsepagespec_command.add_argument('-b', '--bake-file', nargs='?')
     parsepagespec_command.set_defaults(func=commands.parse_page_spec)
 
     pagecount_command = sub.add_parser("pagecount")

@@ -17,12 +17,32 @@ def page_count(args: argparse.Namespace):
 
 
 def parse_page_spec(args: argparse.Namespace):
-    pagespec = PageSpec.parse(args.spec)
-    print(pagespec)
+    bake_file: PdfFile | None = None
+    if args.bake_file:
+        (filename, _, password) = parse_file_specifier(args.bake_file)
+        bake_file = PdfFile(filename, None, password)
+
+    spec = None
+    while True:
+        if args.spec:
+            spec = args.spec
+        else:
+            try:
+                spec = input((bake_file.filename if bake_file else '') + '> ')
+            except (EOFError, KeyboardInterrupt):
+                break
+
+        pagespec = PageSpec.parse(spec)
+        print(pagespec)
+        if bake_file:
+            pprint(list(map(lambda x: x+1, pagespec.bake(bake_file))))
+
+        if args.spec:
+            break
 
 
 def copy(args: argparse.Namespace) -> bool:
-    _logger.log(f"copy {repr(args.file)} to {repr(args.output_file)} " +
+    _logger.dbug(f"copy {repr(args.file)} to {repr(args.output_file)} " +
                 f"(owner_password={repr(args.owner_password)})")
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
@@ -48,11 +68,12 @@ def copy(args: argparse.Namespace) -> bool:
         return False
     return True
 
+
 def split(args: argparse.Namespace) -> bool:
     if args.count <= 0:
         _logger.err(f"count must be larger than 0 (is {args.count})")
 
-    _logger.log(f"split {repr(args.file)} count {args.count} " +
+    _logger.dbug(f"split {repr(args.file)} count {args.count} " +
                 f"(owner_password={repr(args.owner_password)})")
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
