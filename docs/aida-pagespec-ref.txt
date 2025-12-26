@@ -1,11 +1,13 @@
-spec := <token> ( "," <token> )+
+spec := <token> ( "," <token> )*
 
 token := <num> | <range>
 
 num := [ "^" ] ( "0".."9" )+
 
-range := [ "*" | <num> "-" <num> ] "{" [ condition ] "}"
+range := [ "*" | <num> "-" <num> ] [ "{" condition "}" ] [ exclude ]
       := [ condition ]          // = "*{" <condition> "}"
+
+exclude := "!" <token>
 
 condition := <keyword> [ <op> <condition> ]
 

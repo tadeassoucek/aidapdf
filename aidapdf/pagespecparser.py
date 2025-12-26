@@ -1,11 +1,10 @@
 """
-1-102!(odd),*(startswith "Appendix" or startswith "Apdx")
+1-102!{odd},*{startswith "Appendix" or startswith "Apdx"}
 """
 
 import string
 import abc
-from pprint import pprint
-from typing import Iterator, TYPE_CHECKING, Callable, Any
+from typing import Iterator, TYPE_CHECKING
 
 from aidapdf.log import Logger
 
@@ -40,8 +39,29 @@ class PageSpecNumberToken(PageSpecToken):
 
 
 class PageSpecCondition:
-    def __init__(self, condition_fn: Callable[[int], bool]):
-        self.condition_fn = condition_fn
+    IS_EVEN = 0
+    IS_ODD = 1
+
+    def __init__(self, call: IS_EVEN | IS_ODD):
+        self.call = call
+
+    def __call__(self, *args, **kwargs) -> bool:
+        x = args[0]
+        assert type(x) is int
+        x += 1
+        if self.call == self.IS_EVEN:
+            return x % 2 == 0
+        elif self.call == self.IS_ODD:
+            return x % 2 == 1
+        else:
+            raise NotImplementedError(f"{self.call} not implemented")
+
+    def __repr__(self) -> str:
+        return (
+                '{' +
+                { PageSpecCondition.IS_ODD: "odd", PageSpecCondition.IS_EVEN: "even" }[self.call] +
+                '}'
+        )
 
 
 class PageSpecRangeToken(PageSpecToken):
@@ -56,12 +76,17 @@ class PageSpecRangeToken(PageSpecToken):
         start = self.start - 1 if self.start >= 0 else file.get_page_count() + self.start
         end = self.end - 1 if self.end >= 0 else file.get_page_count() + self.end
         if self.condition:
-            return list(filter(self.condition.condition_fn, range(start, end+1)))
+            return list(filter(self.condition.__call__, range(start, end+1)))
         else:
             return list(range(start, end+1))
 
     def __str__(self):
-        return _ntos(self.start) + "-" + _ntos(self.end) + ('?' if self.condition else '')
+        if self.start == 1 and self.end == -1:
+            rng = "*"
+        else:
+            rng = _ntos(self.start) + "-" + _ntos(self.end)
+
+        return rng + (repr(self.condition) if self.condition else '')
 
 
 PageSpecRangeToken.ALL = PageSpecRangeToken(1)
@@ -93,9 +118,9 @@ class PageSpec:
                         else:
                             raise PageSpecParserException(f"invalid token {repr(tok)}")
                     elif tok == 'even':
-                        condition = PageSpecCondition(lambda x: x % 2 == 1)
+                        condition = PageSpecCondition(PageSpecCondition.IS_EVEN)
                     elif tok == 'odd':
-                        condition = PageSpecCondition(lambda x: x % 2 == 0)
+                        condition = PageSpecCondition(PageSpecCondition.IS_ODD)
                     else:
                         raise PageSpecParserException(f"invalid or unspecified condition expression: {repr(tok)}")
                 else:
@@ -122,6 +147,16 @@ class PageSpec:
                             parsing_condition = True
                         else:
                             raise PageSpecParserException(f"invalid token {repr(tok)}; must follow condition and can't nest")
+                    elif tok in ['even', 'odd']:
+                        if toktype is None:
+                            rng = PageSpecRangeToken(1)
+                            if tok == 'even':
+                                rng.condition = PageSpecCondition(PageSpecCondition.IS_EVEN)
+                            else:
+                                rng.condition = PageSpecCondition(PageSpecCondition.IS_ODD)
+                            res.append(rng)
+                        else:
+                            raise PageSpecParserException(f"invalid token {repr(tok)}")
                     else:
                         raise PageSpecParserException(f"invalid token {repr(tok)}")
                 elif type(tok) is int:

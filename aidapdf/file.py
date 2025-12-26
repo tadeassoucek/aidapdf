@@ -25,12 +25,14 @@ def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
 
 
 class PdfFile:
-    def __init__(self, filename: str | PathLike, page_spec: Optional[str] = None, password: Optional[str] = None,
+    def __init__(self, filename: str | PathLike,
+                 page_spec: Optional[str] = None,
+                 password: Optional[str] = None,
                  owner: Optional['PdfFile'] = None):
         self.filename = filename
         self.page_spec: PageSpec | None = PageSpec.parse(page_spec) if page_spec else None
-        self.password = owner.password if owner and not password else password
         self.owner = owner
+        self.password = owner.password if owner and not password else password
         self._reader: Optional[PdfReader] = None
         self._writer: Optional[PdfWriter] = None
         _logger.debug(f"created {self}")
