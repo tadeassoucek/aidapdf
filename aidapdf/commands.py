@@ -6,7 +6,8 @@ from typing import Any
 
 from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
-from aidapdf.file import PdfOutFile, PdfFile, parse_file_specifier
+from aidapdf import util
+from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
 from aidapdf.pagespecparser import PageSpec
 
@@ -20,27 +21,31 @@ def page_count(args: argparse.Namespace):
 
 def parse_page_spec(args: argparse.Namespace):
     bake_file: PdfFile | None = None
-    if args.bake_file:
-        (filename, _, password) = parse_file_specifier(args.bake_file)
+    if args.file:
+        (filename, _, password) = parse_file_specifier(args.file)
         bake_file = PdfFile(filename, None, password)
+        bake_file.get_reader_unsafe()
 
     spec = None
-    while True:
-        if args.spec:
-            spec = args.spec
-        else:
-            try:
+    try:
+        while True:
+            if args.spec:
+                spec = args.spec
+            else:
                 spec = input((bake_file.filename if bake_file else '') + '> ')
-            except (EOFError, KeyboardInterrupt):
+
+            page_spec = PageSpec.parse(spec)
+            print(page_spec)
+            if bake_file:
+                pprint(list(map(lambda x: x+1, page_spec.bake(bake_file))))
+
+            if args.spec:
                 break
-
-        pagespec = PageSpec.parse(spec)
-        print(pagespec)
+    except (EOFError, KeyboardInterrupt):
+        pass
+    finally:
         if bake_file:
-            pprint(list(map(lambda x: x+1, pagespec.bake(bake_file))))
-
-        if args.spec:
-            break
+            bake_file.finalize()
 
 
 def info(args: argparse.Namespace):
@@ -49,39 +54,58 @@ def info(args: argparse.Namespace):
             print(prefix + ':', value)
 
     file = PdfFile(*parse_file_specifier(args.file))
-    pages = file.get_page_count()
-    print_target("pages", "Pages", pages)
-    print_target("metadata", "Metadata", file.get_metadata())
-    file.finalize()
+    with file.get_reader():
+        pages = file.get_page_count()
+        print_target("pages", "Pages", pages)
+        print_target("metadata", "Metadata", file.get_metadata(printable=True))
 
 
 def extract(args: argparse.Namespace):
     tup = parse_file_specifier(args.file)
     stream = open(args.output_file, mode='w+') if args.output_file else sys.stdout
     file = PdfFile(*tup)
-    for page in file.get_pages():
-        print(page.extract_text(extraction_mode=args.extract_mode), file=stream)
-    file.finalize()
+    with file.get_reader():
+        for page in file.get_pages():
+            print(page.extract_text(extraction_mode=args.extract_mode), file=stream)
     if args.output_file:
         stream.close()
+        _logger.info(f"wrote extracted text to {repr(args.output_file)}")
 
 
 def copy(args: argparse.Namespace) -> bool:
-    _logger.dbug(f"copy {repr(args.file)} to {repr(args.output_file)} " +
+    _logger.debug(f"copy {repr(args.file)} to {repr(args.output_file)} " +
                 f"(owner_password={repr(args.owner_password)})")
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
+    blank_pages = PageSpec.parse(args.add_blank) if args.add_blank else None
     try:
+        if args.pages: page_spec = PageSpec.parse(args.pages)
         # open in file
         file = PdfFile(filename, page_spec, password)
-        if args.pages: file.page_spec = PageSpec.parse(args.pages)
         # open out file
-        out = PdfOutFile(args.output_file, file)
+        out = PdfFile(args.output_file, owner=file)
+
         # open writer
-        with out.get_writer(file.get_metadata() if args.copy_metadata else None, args.owner_password) as writer:
+        with file.get_reader(), out.get_writer() as writer:
             for page in file.get_pages():
                 # copy every page
-                writer.add_page(page)
+                if args.reverse:
+                    writer.insert_page(page, 0)
+                else:
+                    writer.add_page(page)
+
+            if blank_pages:
+                bs = blank_pages.bake(file)
+                for idx in bs:
+                    out.insert_blank_page(idx)
+
+            if args.copy_metadata:
+                out.copy_metadata_from_owner()
+            if args.owner_password:
+                out.encrypt(args.owner_password)
+
+        if args.preview:
+            util.open_file(out.filename)
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False
@@ -98,7 +122,7 @@ def split(args: argparse.Namespace) -> bool:
     if args.count <= 0:
         _logger.err(f"count must be larger than 0 (is {args.count})")
 
-    _logger.dbug(f"split {repr(args.file)} count {args.count} " +
+    _logger.debug(f"split {repr(args.file)} count {args.count} " +
                 f"(owner_password={repr(args.owner_password)})")
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
@@ -107,21 +131,26 @@ def split(args: argparse.Namespace) -> bool:
 
     try:
         file = PdfFile(filename, page_spec, password)
-        if args.count > file.get_page_count():
-            _logger.err(f"count must be smaller or equal to the page count ({args.count} > {file.get_page_count()})")
+        with file.get_reader():
+            if args.count > file.get_page_count():
+                _logger.err(f"count must be smaller or equal to the page count ({args.count} > {file.get_page_count()})")
 
-        outfiles: list[PdfOutFile] = []
-        for i in range(args.count):
-            outfiles.append(PdfOutFile(template.format(dir=fp.parent, name=fp.stem, ext=fp.suffix, i=i+1), file))
-            _logger.info(f"output file {i+1}: {outfiles[-1]}")
+            outfiles: list[PdfFile] = []
+            for i in range(args.count):
+                outfiles.append(PdfFile(template.format(dir=fp.parent, name=fp.stem, ext=fp.suffix, i=i+1), owner=file))
+                _logger.info(f"output file {i+1}: {outfiles[-1]}")
 
-        i = 0
-        for page in file.get_pages():
-            outfiles[i % args.count].get_writer_unsafe().add_page(page)
-            i += 1
+            i = 0
+            for page in file.get_pages():
+                outfiles[i % args.count].get_writer_unsafe().add_page(page)
+                i += 1
 
-        for f in outfiles:
-            f.finalize(file.get_metadata() if args.copy_metadata else None, args.owner_password)
+            for f in outfiles:
+                if args.copy_metadata:
+                    f.copy_metadata_from_owner()
+                if args.owner_password:
+                    f.encrypt(args.owner_password)
+                f.finalize()
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False

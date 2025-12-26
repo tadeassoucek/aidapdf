@@ -2,7 +2,7 @@ import pprint
 import sys
 
 
-LOG_LEVEL = 2
+LOG_LEVEL = 3
 
 
 class Logger:
@@ -21,7 +21,7 @@ class Logger:
             epilogue = ' ' + pprint.pformat(kwargs) if kwargs else ""
             print(f"[{Logger.LEVELS[level]} {self.name}] " + message + epilogue, file=sys.stderr)
 
-    def dbug(self, message: str, **kwargs) -> None:
+    def debug(self, message: str, **kwargs) -> None:
         self._log(message, 3, **kwargs)
 
     def info(self, message: str, **kwargs) -> None:

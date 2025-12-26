@@ -4,11 +4,11 @@ token := <num> | <range>
 
 num := [ "^" ] ( "0".."9" )+
 
-range := [ "*" | <num> "-" <num> ] "(" [ condition ] ")"
-      := [ condition ]          // = "*(" <condition> ")"
+range := [ "*" | <num> "-" <num> ] "{" [ condition ] "}"
+      := [ condition ]          // = "*{" <condition> "}"
 
 condition := <keyword> [ <op> <condition> ]
 
 keyword := "odd" | "even"
 
-op := "or" | "and"
+op := "or" | "|" | "and" | "&"

@@ -5,19 +5,21 @@ from aidapdf import commands
 
 def main():
     parser = argparse.ArgumentParser("aidapdf")
+
     sub = parser.add_subparsers()
 
     info_command = sub.add_parser("info", aliases=['i'])
     info_command.add_argument("file")
     group = info_command.add_mutually_exclusive_group(required=False)
-    group.add_argument("-a", "--all", dest="targets", action="store_const", const=["pages", "metadata"], default=["pages", "metadata"])
+    group.add_argument("-a", "--all", dest="targets", action="store_const",
+                       const=["pages", "metadata"], default=["pages", "metadata"])
     group.add_argument("-p", "--pages", dest="targets", action="store_const", const=["pages"])
     group.add_argument("-m", "--metadata", dest="targets", action="store_const", const=["metadata"])
     info_command.set_defaults(func=commands.info)
 
     parsepagespec_command = sub.add_parser('parsepagespec')
     parsepagespec_command.add_argument('spec', nargs="?")
-    parsepagespec_command.add_argument('-b', '--bake-file', nargs='?')
+    parsepagespec_command.add_argument('-f', '--file', nargs='?')
     parsepagespec_command.set_defaults(func=commands.parse_page_spec)
 
     extract_command = sub.add_parser('extract', aliases=['x'])
@@ -32,7 +34,10 @@ def main():
     copy_command.add_argument("pages", nargs="?")
     copy_command.add_argument("-o", "--output-file")
     copy_command.add_argument("-P", "--owner-password", nargs="?")
-    copy_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction)
+    copy_command.add_argument('--copy-metadata', default=True, action=argparse.BooleanOptionalAction)
+    copy_command.add_argument('--reverse', action="store_true")
+    copy_command.add_argument('-b', '--add-blank', nargs='?')
+    copy_command.add_argument('-p', '--preview', action="store_true")
     copy_command.set_defaults(func=commands.copy)
 
     split_command = sub.add_parser("split", aliases=["s"])

@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from os import PathLike
-from typing import Iterator, Generator, Tuple, Any
+from typing import Iterator, Generator, Tuple, Any, Optional
 
 from pypdf import PdfReader, PageObject, PdfWriter
 from pypdf.generic import IndirectObject
@@ -13,7 +13,7 @@ _logger = Logger(__name__)
 
 
 def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
-    toks = fsp.split(';')
+    toks = fsp.split(':')
     filename: str | None = toks[0]
     page_range: str | None = None
     password: str | None = None
@@ -25,60 +25,38 @@ def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
 
 
 class PdfFile:
-    def __init__(self, filename: str | PathLike, page_spec: str | None = None, password: str | None = None):
+    def __init__(self, filename: str | PathLike, page_spec: Optional[str] = None, password: Optional[str] = None,
+                 owner: Optional['PdfFile'] = None):
         self.filename = filename
-        self.page_spec: PageSpec = PageSpec.parse(page_spec) if page_spec else PageSpec.ALL
-        self.password = password
-        self._reader = PdfReader(self.filename, password=self.password)
-        _logger.dbug(f"created {self}")
+        self.page_spec: PageSpec | None = PageSpec.parse(page_spec) if page_spec else None
+        self.password = owner.password if owner and not password else password
+        self.owner = owner
+        self._reader: Optional[PdfReader] = None
+        self._writer: Optional[PdfWriter] = None
+        _logger.debug(f"created {self}")
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
         try:
+            self._reader = PdfReader(self.filename)
             yield self._reader
         finally:
             self.finalize()
 
-    def finalize(self):
-        self._reader.close()
-        _logger.dbug(f"closed {self}")
-
-    def get_metadata(self) -> dict[str, Any]:
-        meta_raw = self._reader.metadata
-        meta = {}
-        for k, v in meta_raw.items():
-            if k.startswith('/'):
-                k = k[1:]
-            meta[k] = str(v) if isinstance(v, IndirectObject) else v
-        return meta
-
-    def get_page_count(self) -> int:
-        return len(self._reader.pages)
-
-    def get_pages(self) -> Iterator[PageObject]:
-        with self.get_reader() as reader:
-            for i in self.page_spec.bake(self):
-                yield reader.get_page(i)
-
-    def __repr__(self) -> str:
-        return f"PdfFile(filename={repr(self.filename)}, page_spec={self.page_spec}, password={repr(self.password)})"
-
-
-class PdfOutFile:
-    def __init__(self, filename: str | PathLike, owner: PdfFile):
-        self.filename = filename
-        self.owner = owner
-        self._writer: PdfWriter | None = None
-        _logger.dbug(f"created {self}")
+    def get_reader_unsafe(self) -> PdfReader:
+        if self._reader is not None:
+            return self._reader
+        self._reader = PdfReader(self.filename)
+        return self._reader
 
     # Generator[yield_type, send_type, return_type]
     @contextmanager
-    def get_writer(self, metadata: dict[str, Any] | None, owner_password: str | None = None) -> Generator[PdfWriter, None, None]:
-        self._writer = PdfWriter()
+    def get_writer(self) -> Generator[PdfWriter, None, None]:
         try:
+            self._writer = PdfWriter()
             yield self._writer
         finally:
-            self.finalize(metadata, owner_password)
+            self.finalize()
             self._writer = None
 
     def get_writer_unsafe(self) -> PdfWriter:
@@ -87,13 +65,56 @@ class PdfOutFile:
         self._writer = PdfWriter()
         return self._writer
 
-    def finalize(self, metadata: dict[str, Any] | None, owner_password: str | None = None) -> None:
-        if owner_password or self.owner.password:
-            self._writer.encrypt(owner_password or self.owner.password, self.owner.password)
-        if metadata: self._writer.add_metadata(metadata)
-        self._writer.write(self.filename)
-        self._writer.close()
-        _logger.dbug(f"closed {self}: owner_password={repr(owner_password)}")
+    def finalize(self) -> None:
+        if self._writer is not None:
+            self._writer.write(self.filename)
+            self._writer.close()
+            _logger.debug(f"closed {self}")
+        elif self._reader is not None:
+            self._reader.close()
+            _logger.debug(f"closed {self}")
+        else:
+            _logger.err(f"{self}.finalize() called but no reader or writer is open")
+            raise Exception(f"{self}.finalize() called but no reader or writer is open")
+
+    def copy_metadata_from_owner(self) -> None:
+        self._writer.add_metadata(self.owner.get_metadata())
+
+    def add_metadata(self, metadata: dict[str, Any]) -> None:
+        self._writer.add_metadata(metadata)
+
+    def insert_blank_page(self, index: int) -> None:
+        if index >= len(self._writer.pages):
+            self._writer.add_blank_page()
+        else:
+            self._writer.insert_blank_page(None, None, index)
+        _logger.debug(f"{self}: inserted blank page @ {index}")
+
+    def get_metadata(self, printable = False) -> dict[str, Any]:
+        meta_raw = self._reader.metadata
+        if printable:
+            meta = {}
+            for k, v in meta_raw.items():
+                if k.startswith('/'):
+                    k = k[1:]
+                meta[k] = str(v) if isinstance(v, IndirectObject) else v
+            return meta
+        else:
+            return meta_raw
+
+    def encrypt(self, owner_password: str):
+        self._writer.encrypt(self.owner.password, owner_password)
+
+    def get_page_count(self) -> int:
+        return len(self._reader.pages)
+
+    def get_pages(self) -> Iterator[PageObject]:
+        if self.page_spec is None:
+            for page in self._reader.pages:
+                yield page
+        else:
+            for i in self.page_spec.bake(self):
+                yield self._reader.get_page(i)
 
     def __repr__(self) -> str:
-        return f"PdfOutFile(filename={repr(self.filename)}, owner={self.owner})"
+        return f"PdfFile({repr(self.filename)})"

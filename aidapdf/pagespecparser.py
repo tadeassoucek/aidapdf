@@ -85,7 +85,7 @@ class PageSpec:
 
             if parsing_condition:
                 if type(tok) is str:
-                    if tok == ')':
+                    if tok == '}':
                         parsing_condition = False
                         last = res[-1]
                         if isinstance(last, PageSpecRangeToken):
@@ -117,7 +117,7 @@ class PageSpec:
                             toktype = PageSpecRangeToken
                         else:
                             raise PageSpecParserException(f"invalid token {repr(tok)}")
-                    elif tok == '(':
+                    elif tok == '{':
                         if toktype is PageSpecRangeToken and not parsing_condition:
                             parsing_condition = True
                         else:
@@ -135,7 +135,7 @@ class PageSpec:
                         raise PageSpecParserException(f"invalid token {repr(tok)}")
 
         ret = PageSpec(res)
-        PageSpec.LOGGER.dbug(f"parsed spec `{text}`: {ret}")
+        PageSpec.LOGGER.debug(f"parsed spec `{text}`: {ret}")
         return ret
 
     def __init__(self, tokens: list[PageSpecToken]):
@@ -167,7 +167,6 @@ def _lex(text: str) -> list[str | int]:
         if t:
             if reading == READING_NUM:
                 t = int(t)
-            PageSpec.LOGGER.dbug(f"pushed token {repr(t)}")
             toks.append(t)
         reading = READING_ANY
 
@@ -201,11 +200,11 @@ def _lex(text: str) -> list[str | int]:
                 push_and_clear('*')
             else:
                 raise PageSpecParserException(f"invalid char {repr(c)} # {i}")
-        elif c == '(':
-            push_and_clear(tok, '(')
+        elif c == '{':
+            push_and_clear(tok, '{')
             parenthesis_depth += 1
-        elif c == ')':
-            push_and_clear(tok, ')')
+        elif c == '}':
+            push_and_clear(tok, '}')
             if parenthesis_depth <= 0:
                 raise PageSpecParserException(f"invalid char {repr(c)} # {i} (no parenthesis to close)")
             parenthesis_depth -= 1
