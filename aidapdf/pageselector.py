@@ -103,6 +103,8 @@ class PageSelector:
 
     @staticmethod
     def parse(text: str) -> 'PageSelector':
+        assert type(text) is str
+
         toks = _lex(text)
         toktype = None
         res: list[PageSelectorToken] = []

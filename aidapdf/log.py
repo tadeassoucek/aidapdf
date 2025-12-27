@@ -2,6 +2,15 @@ import pprint
 import sys
 from typing import Optional
 
+import colors
+
+
+def _color(text: str, *args, **kwargs) -> str:
+    if sys.stderr.isatty():
+        return colors.color(text, *args, **kwargs)
+    else:
+        return text
+
 
 class Logger:
     LEVELS = {
@@ -9,6 +18,13 @@ class Logger:
         1: "WARN",
         2: "INFO",
         3: "DBUG",
+    }
+
+    LEVEL_COLORS = {
+        0: "red",
+        1: "yellow",
+        2: "white",
+        3: "gray",
     }
 
     LOG_LEVEL = 2
@@ -22,7 +38,8 @@ class Logger:
         if level <= Logger.LOG_LEVEL:
             prefix = f"{Logger.LEVELS[level]}:{self._name}"
             suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
-            print(prefix + '  ' + message + suffix, file=sys.stderr)
+            print(_color(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +
+                  _color(message + suffix, fg='white'), file=sys.stderr)
 
     def debug(self, message: str, **kwargs) -> None:
         self._log(message, 3, **kwargs)

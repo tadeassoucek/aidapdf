@@ -1,4 +1,5 @@
 import platform
+import sys
 from contextlib import contextmanager
 from os import PathLike, path
 from pathlib import Path
@@ -6,7 +7,6 @@ from typing import Iterator, Generator, Tuple, Any, Optional
 
 import pypdf
 from pypdf import PdfReader, PageObject, PdfWriter
-from pypdf.errors import FileNotDecryptedError, WrongPasswordError
 from pypdf.generic import IndirectObject
 
 from aidapdf.log import Logger
@@ -75,7 +75,10 @@ class PdfFile:
             if res == pypdf.PasswordType.NOT_DECRYPTED:
                 # password is incorrect
                 self._logger.err("incorrect password")
-                self.password = getpass(f"Password to read file {repr(str(self.path))}: ")
+                try:
+                    self.password = getpass(f"Password to read file {repr(str(self.path))}: ")
+                except (EOFError, KeyboardInterrupt):
+                    sys.exit(1)
             else:
                 # decrypted successfully
                 encrypted = False

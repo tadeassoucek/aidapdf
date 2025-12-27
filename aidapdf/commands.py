@@ -7,6 +7,7 @@ from typing import Any
 from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
 import aidapdf
+import readline
 from aidapdf import util
 from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
@@ -23,7 +24,14 @@ def version(args: argparse.Namespace):
         print(aidapdf.__name__, aidapdf.__version__)
 
 
-def parse_page_spec(args: argparse.Namespace):
+def debug_testlog(_: argparse.Namespace) -> None:
+    _logger.debug("message", s="Hello world!", i=10)
+    _logger.info("message", s="Hello world!", i=10)
+    _logger.warn("message", s="Hello world!", i=10)
+    _logger.err("message", s="Hello world!", i=10)
+
+
+def debug_parse(args: argparse.Namespace):
     bake_file: PdfFile | None = None
     if args.file:
         (filename, _, password) = parse_file_specifier(args.file)
@@ -32,23 +40,23 @@ def parse_page_spec(args: argparse.Namespace):
 
     try:
         while True:
-            if args.spec:
-                spec = args.spec
+            if args.select:
+                select = args.select
             else:
-                spec = input((bake_file.path.name if bake_file else '') + '> ')
+                select = input((bake_file.path.name if bake_file else '') + '> ')
 
-            page_spec = PageSelector.parse(spec)
-            print(page_spec)
+            select = PageSelector.parse(select)
+            print(select)
             if bake_file:
-                pprint(list(map(lambda x: x+1, page_spec.bake(bake_file))))
+                pprint(list(map(lambda x: x+1, select.bake(bake_file))))
 
-            if args.spec:
+            if args.select:
                 break
     except (EOFError, KeyboardInterrupt):
-        pass
+        print()
     finally:
         if bake_file:
-            bake_file.finalize()
+            bake_file.close_reader()
 
 
 def info(args: argparse.Namespace):
