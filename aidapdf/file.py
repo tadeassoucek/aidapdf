@@ -9,7 +9,7 @@ from pypdf.generic import IndirectObject
 
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
-
+from aidapdf.util import repr_password
 
 _logger = Logger(__name__)
 
@@ -35,8 +35,8 @@ def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
     if len(toks) >= 3:
         password = toks[2] or None
 
-    _logger.debug(f'file specifier {repr(fsp)} parsed as {repr(filename)}; selector={repr(selector)}; '
-                  f'password={repr(password)}')
+    _logger.debug(f'file specifier parsed as {repr(filename)}; selector={repr(selector)}; '
+                  f'password={repr_password() if password else ''}')
 
     return filename, selector, password
 
@@ -49,13 +49,14 @@ class PdfFile:
         self.path = Path(filename)
         self.selector: Optional[PageSelector] = PageSelector.parse(selector) if type(selector) is str else selector or None
         self.owner = owner
-        self.password = owner.password if owner and not password else password
+        self.password = password
 
         self._reader: Optional[PdfReader] = None
         self._reader_open = False
         self._writer: Optional[PdfWriter] = None
         self._writer_open = False
-        _logger.debug(f"{self}: created" + (f" (password={repr(self.password)})" if self.password else ""))
+
+        _logger.debug(f"{self}: created")
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
@@ -166,7 +167,7 @@ class PdfFile:
         if not owner_password: raise ValueError("no owner password provided")
         self._writer.encrypt(password or self.owner.password, owner_password)
         if self.owner.password:
-            _logger.debug(f"{self}: encrypted with password taken from {self.owner} and provided owner_password (*****)")
+            _logger.debug(f"{self}: encrypted with password taken from {self.owner} and provided owner_password ({repr_password()})")
         else:
             _logger.debug(f"{self}: encrypted with the provided passwords")
 

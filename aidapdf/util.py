@@ -1,6 +1,11 @@
+import random
 import subprocess
 import platform
 import os
+
+
+def repr_password() -> str:
+    return repr('*' * random.randint(4, 10))
 
 
 def open_file(filepath: str | os.PathLike):
