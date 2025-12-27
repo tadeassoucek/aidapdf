@@ -1,4 +1,5 @@
 import argparse
+from argparse import BooleanOptionalAction
 
 from aidapdf import commands
 from aidapdf.log import Logger
@@ -9,6 +10,9 @@ _logger = Logger(__name__)
 
 def main():
     parser = argparse.ArgumentParser("aidapdf")
+
+    parser.add_argument('--color', default=True, action=BooleanOptionalAction,
+                        help="enable color output")
 
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument('-v', '--verbose', dest="verbose_level", action='store_const', const=3,
@@ -93,6 +97,9 @@ def main():
     split_command.set_defaults(func=commands.split)
 
     args = parser.parse_args()
+
+    if "color" in args:
+        Logger.COLOR = args.color
 
     if "verbose_level" in args and args.verbose_level is not None:
         Logger.LOG_LEVEL = args.verbose_level

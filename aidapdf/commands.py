@@ -140,9 +140,6 @@ def split(args: argparse.Namespace) -> bool:
     if args.count <= 0:
         _logger.err(f"count must be larger than 0 (is {args.count})")
 
-    _logger.debug(f"split {repr(args.file)} count {args.count} " +
-                f"(owner_password={repr(args.owner_password)})")
-
     (filename, page_spec, password) = parse_file_specifier(args.file)
     fp = Path(filename)
     template = args.output_file_template or "{dir}/{name}-{i}.pdf"

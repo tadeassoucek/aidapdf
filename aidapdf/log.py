@@ -5,13 +5,6 @@ from typing import Optional
 import colors
 
 
-def _color(text: str, *args, **kwargs) -> str:
-    if sys.stderr.isatty():
-        return colors.color(text, *args, **kwargs)
-    else:
-        return text
-
-
 class Logger:
     LEVELS = {
         0: "ERR!",
@@ -27,7 +20,16 @@ class Logger:
         3: "gray",
     }
 
+    COLOR = True
+
     LOG_LEVEL = 2
+
+    @staticmethod
+    def _color(text: str, *args, **kwargs) -> str:
+        if Logger.COLOR and sys.stderr.isatty():
+            return colors.color(text, *args, **kwargs)
+        else:
+            return text
 
     def __init__(self, name: str, parent: Optional['Logger'] = None):
         self.name = name.replace('aidapdf.', '')
@@ -38,8 +40,8 @@ class Logger:
         if level <= Logger.LOG_LEVEL:
             prefix = f"{Logger.LEVELS[level]}:{self._name}"
             suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
-            print(_color(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +
-                  _color(message + suffix, fg='white'), file=sys.stderr)
+            print(Logger._color(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +
+                  Logger._color(message + suffix, fg='white'), file=sys.stderr)
 
     def debug(self, message: str, **kwargs) -> None:
         self._log(message, 3, **kwargs)
