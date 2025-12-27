@@ -34,6 +34,10 @@ def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
         selector = toks[1] or None
     if len(toks) >= 3:
         password = toks[2] or None
+
+    _logger.debug(f'file specifier {repr(fsp)} parsed as {repr(filename)}; selector={repr(selector)}; '
+                  f'password={repr(password)}')
+
     return filename, selector, password
 
 
@@ -51,7 +55,7 @@ class PdfFile:
         self._reader_open = False
         self._writer: Optional[PdfWriter] = None
         self._writer_open = False
-        _logger.debug(f"{self}: created")
+        _logger.debug(f"{self}: created" + (f" (password={repr(self.password)})" if self.password else ""))
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
@@ -63,7 +67,7 @@ class PdfFile:
         if self._reader_open: raise ValueError("reader already open")
 
         try:
-            self._reader = PdfReader(self.path)
+            self._reader = PdfReader(self.path, password=self.password)
             self._reader_open = True
             _logger.debug(f"{self}: reader opened")
             yield self._reader
@@ -79,7 +83,7 @@ class PdfFile:
 
         if self._reader is not None:
             return self._reader
-        self._reader = PdfReader(self.path)
+        self._reader = PdfReader(self.path, password=self.password)
         self._reader_open = True
         _logger.debug(f"{self}: reader opened")
         return self._reader
@@ -157,7 +161,8 @@ class PdfFile:
 
     def encrypt(self, password: Optional[str], owner_password: str):
         if not self._writer_open: raise ValueError("writer closed")
-        if not password and (not self.owner or not self.owner.password): raise ValueError("no password provided")
+        password = password or (self.owner and self.owner.password)
+        if not password: raise ValueError("no password provided")
         if not owner_password: raise ValueError("no owner password provided")
         self._writer.encrypt(password or self.owner.password, owner_password)
         if self.owner.password:

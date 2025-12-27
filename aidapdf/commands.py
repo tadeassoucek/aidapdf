@@ -107,7 +107,7 @@ def copy(args: argparse.Namespace) -> bool:
 
             if args.copy_metadata:
                 out.copy_metadata_from_owner()
-            if args.password or args.owner_password:
+            if (args.copy_password and file.password) or args.owner_password:
                 out.encrypt(args.password, args.owner_password)
 
         _logger.info(f"copied {repr(filename)} to {repr(str(out.path))}")

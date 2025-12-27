@@ -53,9 +53,18 @@ def main():
     copy_command.add_argument("-o", "--output-file", help="the new PDF file. as of now, this is "
                                                           "required, as pypdf can't write to stdout")
     copy_command.add_argument("-s", "--select", nargs="?", help="selected pages")
-    copy_command.add_argument("-p", "--password", nargs="?", help="password to protect the new file with")
+
+    # encryption {{{
+    copy_command.add_argument('--copy-password', default=True, action=argparse.BooleanOptionalAction,
+                              help="if the input file is protected by a password, protect the new file with the same "
+                                   "password. if set and there is a password to copy, an owner password must be provided"
+                                   "with the --owner-password option. on by default")
+    copy_command.add_argument("-p", "--password", nargs="?",
+                              help="password to protect the new file with. supercedes --copy-password option")
     copy_command.add_argument("-P", "--owner-password", nargs="?",
                               help="owner password to protect the new file with")
+    # }}}
+
     copy_command.add_argument('--copy-metadata', default=True, action=argparse.BooleanOptionalAction,
                               help="copy metadata from the original file to the new one. on by default")
     copy_command.add_argument('--reverse', action="store_true", help="reverse the order of the pages")
@@ -74,7 +83,7 @@ def main():
 
     args = parser.parse_args()
 
-    if "verbose_level" in args:
+    if "verbose_level" in args and args.verbose_level is not None:
         Logger.LOG_LEVEL = args.verbose_level
 
     if "func" in args:
