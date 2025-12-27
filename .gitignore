@@ -1,4 +1,5 @@
 .venv/
+aidapdf/__pycache__/
 aidapdf.egg-info/
 dist/
 temp/

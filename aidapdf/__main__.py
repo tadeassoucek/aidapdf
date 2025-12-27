@@ -27,12 +27,13 @@ def main():
     debug_command = sub.add_parser("debug", aliases=['dbg'], help="debug command")
     debug_sub = debug_command.add_subparsers()
 
-    testlog_command = debug_sub.add_parser("testlog")
+    testlog_command = debug_sub.add_parser("testlog", help="test the log command")
     testlog_command.set_defaults(func=commands.debug_testlog)
 
-    parse_command = debug_sub.add_parser("parse")
-    parse_command.add_argument("select", nargs='?')
-    parse_command.add_argument("-f", "--file", nargs='?')
+    parse_command = debug_sub.add_parser("parse", help="parse and show page selector")
+    parse_command.add_argument("select", nargs='?', help="page selector. if none is specified, "
+                                                         "enters interactive mode")
+    parse_command.add_argument("-f", "--file", nargs='?', help="file to use as a bake file")
     parse_command.set_defaults(func=commands.debug_parse)
 
     version_command = sub.add_parser('version', aliases=['v'], help="print version information and exit")

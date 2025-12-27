@@ -175,6 +175,9 @@ class PageSelector:
                     else:
                         raise PageSelectorParserException(f"invalid token {repr(tok)}")
 
+        if len(res) == 0:
+            res = [PageSelectorRangeToken.ALL]
+
         ret = PageSelector(res)
         _logger.debug(f"parsed {repr(text)} {toks} as {ret}")
         return ret
