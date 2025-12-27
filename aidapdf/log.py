@@ -1,5 +1,6 @@
 import pprint
 import sys
+from typing import Optional
 
 
 class Logger:
@@ -12,12 +13,14 @@ class Logger:
 
     LOG_LEVEL = 2
 
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, name: str, parent: Optional['Logger'] = None):
+        self.name = name.replace('aidapdf.', '')
+        self.parent = parent
+        self._name = (self.parent.name + ':' if self.parent else "") + self.name
 
     def _log(self, message: str, level: int, **kwargs) -> None:
         if level <= Logger.LOG_LEVEL:
-            prefix = f"{Logger.LEVELS[level]}:{self.name}"
+            prefix = f"{Logger.LEVELS[level]}:{self._name}"
             suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
             print(prefix + '  ' + message + suffix, file=sys.stderr)
 
