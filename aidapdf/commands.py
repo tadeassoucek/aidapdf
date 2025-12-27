@@ -10,7 +10,7 @@ import aidapdf
 from aidapdf import util
 from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
-from aidapdf.pagespecparser import PageSpec
+from aidapdf.pageselector import PageSelector
 
 
 _logger = Logger(__name__)
@@ -37,7 +37,7 @@ def parse_page_spec(args: argparse.Namespace):
             else:
                 spec = input((bake_file.path.name if bake_file else '') + '> ')
 
-            page_spec = PageSpec.parse(spec)
+            page_spec = PageSelector.parse(spec)
             print(page_spec)
             if bake_file:
                 pprint(list(map(lambda x: x+1, page_spec.bake(bake_file))))
@@ -82,12 +82,12 @@ def extract(args: argparse.Namespace):
 def copy(args: argparse.Namespace) -> bool:
     _logger.debug(f"copy {args}")
 
-    (filename, page_spec, password) = parse_file_specifier(args.file)
-    blank_pages = PageSpec.parse(args.add_blank) if args.add_blank else None
+    (filename, page_selector, password) = parse_file_specifier(args.file)
+    blank_pages = PageSelector.parse(args.add_blank) if args.add_blank else None
     try:
-        if args.pages: page_spec = PageSpec.parse(args.pages)
+        if args.select: page_selector = PageSelector.parse(args.select)
         # open in file
-        file = PdfFile(filename, page_spec, password)
+        file = PdfFile(filename, page_selector, password)
         # open out file
         out = PdfFile(args.output_file, owner=file)
 
@@ -160,7 +160,7 @@ def split(args: argparse.Namespace) -> bool:
                     f.copy_metadata_from_owner()
                 if args.owner_password:
                     f.encrypt(args.owner_password)
-                f.finalize()
+                f.close_writer()
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False

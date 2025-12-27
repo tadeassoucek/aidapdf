@@ -1,6 +1,6 @@
-from argparse import ArgumentError
+import platform
 from contextlib import contextmanager
-from os import PathLike
+from os import PathLike, path
 from pathlib import Path
 from typing import Iterator, Generator, Tuple, Any, Optional
 
@@ -8,7 +8,7 @@ from pypdf import PdfReader, PageObject, PdfWriter
 from pypdf.generic import IndirectObject
 
 from aidapdf.log import Logger
-from aidapdf.pagespecparser import PageSpec
+from aidapdf.pageselector import PageSelector
 
 
 _logger = Logger(__name__)
@@ -16,23 +16,34 @@ _logger = Logger(__name__)
 
 def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
     toks = fsp.split(':')
+
+    # on windows, "C:\Users\...\Downloads\file.pdf" could be interpreted as a file name "C" with "\Users\..." being
+    # interpreted as the page selector. to prevent this, we check if such a file exists in the CWD and if not,
+    # we assume the "[a-zA-Z]:" prefix is actually part of the path
+    if platform.system() == 'Windows' and len(toks[0]) == 1 and len(toks) > 1:
+        drive = toks[0]
+        # just in case: what if the user is referring to a file named "C" in the CWD?
+        if not path.exists(drive):
+            toks = toks[1:]
+            toks[0] = drive + ':' + toks[0]
+
     filename: str | None = toks[0]
-    page_range: str | None = None
+    selector: str | None = None
     password: str | None = None
     if len(toks) >= 2:
-        page_range = toks[1] or None
+        selector = toks[1] or None
     if len(toks) >= 3:
         password = toks[2] or None
-    return filename, page_range, password
+    return filename, selector, password
 
 
 class PdfFile:
     def __init__(self, filename: str | PathLike,
-                 page_spec: Optional[str | PageSpec] = None,
+                 selector: Optional[str | PageSelector] = None,
                  password: Optional[str] = None,
                  owner: Optional['PdfFile'] = None):
         self.path = Path(filename)
-        self.page_spec: Optional[PageSpec] = PageSpec.parse(page_spec) if type(page_spec) is str else page_spec or None
+        self.selector: Optional[PageSelector] = PageSelector.parse(selector) if type(selector) is str else selector or None
         self.owner = owner
         self.password = owner.password if owner and not password else password
 
@@ -44,15 +55,28 @@ class PdfFile:
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
+        """
+        Creates a reader. Use with a `with` statement.
+        :return: The created `PdfReader` object.
+        """
+
+        if self._reader_open: raise ValueError("reader already open")
+
         try:
             self._reader = PdfReader(self.path)
             self._reader_open = True
             _logger.debug(f"{self}: reader opened")
             yield self._reader
         finally:
-            self.finalize()
+            self.close_reader()
 
     def get_reader_unsafe(self) -> PdfReader:
+        """
+        If a reader already exists, returns it. Otherwise, creates a new one.
+        Should only be used when you can't use `get_reader()`. Don't forget to call `close_reader()` after you're finished.
+        :return: The already open or newly created `PdfReader` object.
+        """
+
         if self._reader is not None:
             return self._reader
         self._reader = PdfReader(self.path)
@@ -60,16 +84,17 @@ class PdfFile:
         _logger.debug(f"{self}: reader opened")
         return self._reader
 
-    # Generator[yield_type, send_type, return_type]
     @contextmanager
     def get_writer(self) -> Generator[PdfWriter, None, None]:
+        if self._writer_open: raise ValueError("writer already open")
+
         try:
             self._writer = PdfWriter()
             self._writer_open = True
             _logger.debug(f"{self}: writer opened")
             yield self._writer
         finally:
-            self.finalize()
+            self.close_writer()
 
     def get_writer_unsafe(self) -> PdfWriter:
         if self._writer is not None:
@@ -79,20 +104,25 @@ class PdfFile:
         _logger.debug(f"{self}: writer opened")
         return self._writer
 
-    def finalize(self) -> None:
-        if self._writer is None and self._reader is None:
-            _logger.debug(f"{self}.finalize() called but no reader or writer is open")
-        elif self._reader is not None:
-            self._reader.close()
-            self._reader_open = False
-            _logger.debug(f"{self}: reader closed")
-            self._reader = None
-        elif self._writer is not None:
-            self._writer.write(self.path)
-            self._writer_open = False
-            self._writer.close()
-            _logger.debug(f"{self}: writer closed")
-            self._writer = None
+    def close_reader(self) -> None:
+        if self._reader is None or not self._reader_open:
+            raise ValueError(f"{self}.close_reader() called but no reader is open")
+
+        self._reader.close()
+        self._reader = None
+        self._reader_open = False
+        _logger.debug(f"{self}: reader closed")
+        self._reader = None
+
+    def close_writer(self) -> None:
+        if self._writer is None or not self._writer_open:
+            raise ValueError(f"{self}.close_writer() called but no writer is open")
+
+        self._writer.write(self.path)
+        self._writer_open = False
+        self._writer.close()
+        _logger.debug(f"{self}: writer closed")
+        self._writer = None
 
     def copy_metadata_from_owner(self) -> None:
         if not self._writer_open: raise ValueError("writer closed")
@@ -141,11 +171,11 @@ class PdfFile:
 
     def get_pages(self) -> Iterator[PageObject]:
         if not self._reader_open: raise ValueError("reader closed")
-        if self.page_spec is None:
+        if self.selector is None:
             for page in self._reader.pages:
                 yield page
         else:
-            for i in self.page_spec.bake(self):
+            for i in self.selector.bake(self):
                 yield self._reader.get_page(i)
 
     def __repr__(self) -> str:
