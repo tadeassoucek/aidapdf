@@ -8,6 +8,9 @@ from typing import Iterator, TYPE_CHECKING
 
 from aidapdf.log import Logger
 
+
+_logger = Logger(__name__)
+
 if TYPE_CHECKING:
     from aidapdf.file import PdfFile
 
@@ -76,7 +79,14 @@ class PageSpecRangeToken(PageSpecToken):
         start = self.start - 1 if self.start >= 0 else file.get_page_count() + self.start
         end = self.end - 1 if self.end >= 0 else file.get_page_count() + self.end
         if self.condition:
-            return list(filter(self.condition.__call__, range(start, end+1)))
+            if self.condition.call == PageSpecCondition.IS_ODD:
+                if (start+1) % 2 == 0: start += 1
+                return list(range(start, end+1, 2))
+            elif self.condition.call == PageSpecCondition.IS_EVEN:
+                if (start+1) % 2 == 1: start += 1
+                return list(range(start, end+1, 2))
+            else:
+                return list(filter(self.condition.__call__, range(start, end+1)))
         else:
             return list(range(start, end+1))
 
@@ -94,8 +104,6 @@ PageSpecRangeToken.ALL = PageSpecRangeToken(1)
 
 class PageSpec:
     ALL: 'PageSpec'
-
-    LOGGER = Logger(__name__)
 
     @staticmethod
     def parse(text: str) -> 'PageSpec':
@@ -170,7 +178,7 @@ class PageSpec:
                         raise PageSpecParserException(f"invalid token {repr(tok)}")
 
         ret = PageSpec(res)
-        PageSpec.LOGGER.debug(f"parsed spec `{text}`: {ret}")
+        _logger.debug(f"parsed {repr(text)} {toks} as {ret}")
         return ret
 
     def __init__(self, tokens: list[PageSpecToken]):
@@ -225,7 +233,7 @@ def _lex(text: str) -> list[str | int]:
             reading = READING_NUM
             tok += '-'
         elif c == '-':
-            if reading == READING_NUM:
+            if reading in [READING_NUM, READING_ANY]:
                 push_and_clear(tok, '-')
                 reading = READING_NUM
             else:

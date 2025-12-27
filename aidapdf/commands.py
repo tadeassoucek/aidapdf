@@ -15,10 +15,6 @@ from aidapdf.pagespecparser import PageSpec
 _logger = Logger(__name__)
 
 
-def page_count(args: argparse.Namespace):
-    print(args.terse, args.files)
-
-
 def parse_page_spec(args: argparse.Namespace):
     bake_file: PdfFile | None = None
     if args.file:
@@ -26,13 +22,12 @@ def parse_page_spec(args: argparse.Namespace):
         bake_file = PdfFile(filename, None, password)
         bake_file.get_reader_unsafe()
 
-    spec = None
     try:
         while True:
             if args.spec:
                 spec = args.spec
             else:
-                spec = input((bake_file.filename if bake_file else '') + '> ')
+                spec = input((bake_file.path.name if bake_file else '') + '> ')
 
             page_spec = PageSpec.parse(spec)
             print(page_spec)
@@ -49,9 +44,11 @@ def parse_page_spec(args: argparse.Namespace):
 
 
 def info(args: argparse.Namespace):
+    _logger.debug(f'info {args}')
+
     def print_target(target: str, prefix: str, value: Any):
         if target in args.targets:
-            print(prefix + ':', value)
+            print(prefix + ':\t' + str(value))
 
     file = PdfFile(*parse_file_specifier(args.file))
     with file.get_reader():
@@ -61,6 +58,8 @@ def info(args: argparse.Namespace):
 
 
 def extract(args: argparse.Namespace):
+    _logger.debug(f"extract {args}")
+
     tup = parse_file_specifier(args.file)
     stream = open(args.output_file, mode='w+') if args.output_file else sys.stdout
     file = PdfFile(*tup)
@@ -73,8 +72,7 @@ def extract(args: argparse.Namespace):
 
 
 def copy(args: argparse.Namespace) -> bool:
-    _logger.debug(f"copy {repr(args.file)} to {repr(args.output_file)} " +
-                f"(owner_password={repr(args.owner_password)})")
+    _logger.debug(f"copy {args}")
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
     blank_pages = PageSpec.parse(args.add_blank) if args.add_blank else None
@@ -105,7 +103,7 @@ def copy(args: argparse.Namespace) -> bool:
                 out.encrypt(args.owner_password)
 
         if args.preview:
-            util.open_file(out.filename)
+            util.open_file(out.path)
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False
@@ -119,6 +117,8 @@ def copy(args: argparse.Namespace) -> bool:
 
 
 def split(args: argparse.Namespace) -> bool:
+    _logger.debug(f'split {args}')
+
     if args.count <= 0:
         _logger.err(f"count must be larger than 0 (is {args.count})")
 

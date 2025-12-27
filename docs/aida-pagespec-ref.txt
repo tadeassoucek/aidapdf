@@ -4,8 +4,9 @@ token := <num> | <range>
 
 num := [ "^" ] ( "0".."9" )+
 
-range := [ "*" | <num> "-" <num> ] [ "{" condition "}" ] [ exclude ]
-      := [ condition ]          // = "*{" <condition> "}"
+range := [ "*" | <num> "-" <num> ] [ "{" <condition> "}" ] [ <exclude> ]
+      := <condition> [ <exclude> ]     // = "*{" <condition> "}"
+      := <exclude>                     // = "*" <exclude>
 
 exclude := "!" <token>
 

@@ -18,8 +18,9 @@ class Logger:
 
     def _log(self, message: str, level: int, **kwargs) -> None:
         if level <= LOG_LEVEL:
-            epilogue = ' ' + pprint.pformat(kwargs) if kwargs else ""
-            print(f"[{Logger.LEVELS[level]} {self.name}] " + message + epilogue, file=sys.stderr)
+            prefix = f"[{self.name} {Logger.LEVELS[level]}]"
+            suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
+            print(prefix.ljust(30, ' ') + '  ' + message + suffix, file=sys.stderr)
 
     def debug(self, message: str, **kwargs) -> None:
         self._log(message, 3, **kwargs)
