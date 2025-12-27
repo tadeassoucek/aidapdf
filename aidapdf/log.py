@@ -2,9 +2,6 @@ import pprint
 import sys
 
 
-LOG_LEVEL = 3
-
-
 class Logger:
     LEVELS = {
         0: "ERR!",
@@ -13,14 +10,16 @@ class Logger:
         3: "DBUG",
     }
 
+    LOG_LEVEL = 2
+
     def __init__(self, name: str):
         self.name = name
 
     def _log(self, message: str, level: int, **kwargs) -> None:
-        if level <= LOG_LEVEL:
-            prefix = f"[{self.name} {Logger.LEVELS[level]}]"
+        if level <= Logger.LOG_LEVEL:
+            prefix = f"{Logger.LEVELS[level]}:{self.name}"
             suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
-            print(prefix.ljust(30, ' ') + '  ' + message + suffix, file=sys.stderr)
+            print(prefix + '  ' + message + suffix, file=sys.stderr)
 
     def debug(self, message: str, **kwargs) -> None:
         self._log(message, 3, **kwargs)

@@ -6,6 +6,7 @@ from typing import Any
 
 from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
+import aidapdf
 from aidapdf import util
 from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
@@ -13,6 +14,13 @@ from aidapdf.pagespecparser import PageSpec
 
 
 _logger = Logger(__name__)
+
+
+def version(args: argparse.Namespace):
+    if args.terse:
+        print(aidapdf.__version__)
+    else:
+        print(aidapdf.__name__, aidapdf.__version__)
 
 
 def parse_page_spec(args: argparse.Namespace):
@@ -99,8 +107,10 @@ def copy(args: argparse.Namespace) -> bool:
 
             if args.copy_metadata:
                 out.copy_metadata_from_owner()
-            if args.owner_password:
-                out.encrypt(args.owner_password)
+            if args.password or args.owner_password:
+                out.encrypt(args.password, args.owner_password)
+
+        _logger.info(f"copied {repr(filename)} to {repr(str(out.path))}")
 
         if args.preview:
             util.open_file(out.path)

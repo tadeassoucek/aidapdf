@@ -1,2 +1,4 @@
 .venv/
-examples/
+aidapdf.egg-info/
+dist/
+temp/

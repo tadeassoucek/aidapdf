@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/printpdftwosided.iml" filepath="$PROJECT_DIR$/.idea/printpdftwosided.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/aidapdf.iml" filepath="$PROJECT_DIR$/.idea/aidapdf.iml" />
     </modules>
   </component>
 </project>

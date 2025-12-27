@@ -1,3 +1,4 @@
+from argparse import ArgumentError
 from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
@@ -124,10 +125,15 @@ class PdfFile:
         else:
             return meta_raw
 
-    def encrypt(self, owner_password: str):
+    def encrypt(self, password: Optional[str], owner_password: str):
         if not self._writer_open: raise ValueError("writer closed")
-        self._writer.encrypt(self.owner.password, owner_password)
-        _logger.debug(f"{self}: encrypted")
+        if not password and (not self.owner or not self.owner.password): raise ValueError("no password provided")
+        if not owner_password: raise ValueError("no owner password provided")
+        self._writer.encrypt(password or self.owner.password, owner_password)
+        if self.owner.password:
+            _logger.debug(f"{self}: encrypted with password taken from {self.owner} and provided owner_password (*****)")
+        else:
+            _logger.debug(f"{self}: encrypted with the provided passwords")
 
     def get_page_count(self) -> int:
         if not self._reader_open: raise ValueError("reader closed")

@@ -1,12 +1,20 @@
 import argparse
 
 from aidapdf import commands
+from aidapdf.log import Logger
 
 
 def main():
     parser = argparse.ArgumentParser("aidapdf")
 
+    parser.add_argument('-v', '--verbose', dest="verbose_level", action='store_const', const=3)
+    parser.add_argument('-q', '--quiet', dest="verbose_level", action='store_const', const=1)
+
     sub = parser.add_subparsers()
+
+    version_command = sub.add_parser('version', aliases=['v'])
+    version_command.add_argument('-t', '--terse', action='store_true')
+    version_command.set_defaults(func=commands.version)
 
     info_command = sub.add_parser("info", aliases=['i'])
     info_command.add_argument("file")
@@ -33,11 +41,12 @@ def main():
     copy_command.add_argument("file")
     copy_command.add_argument("pages", nargs="?")
     copy_command.add_argument("-o", "--output-file")
+    copy_command.add_argument("-p", "--password", nargs="?")
     copy_command.add_argument("-P", "--owner-password", nargs="?")
     copy_command.add_argument('--copy-metadata', default=True, action=argparse.BooleanOptionalAction)
     copy_command.add_argument('--reverse', action="store_true")
     copy_command.add_argument('-b', '--add-blank', nargs='?')
-    copy_command.add_argument('-p', '--preview', action="store_true")
+    copy_command.add_argument('-w', '--preview', action="store_true")
     copy_command.set_defaults(func=commands.copy)
 
     split_command = sub.add_parser("split", aliases=["s"])
@@ -49,6 +58,8 @@ def main():
     split_command.set_defaults(func=commands.split)
 
     args = parser.parse_args()
+    if args.verbose_level:
+        Logger.LOG_LEVEL = args.verbose_level
     args.func(args)
 
 if __name__ == '__main__':

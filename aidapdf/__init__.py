@@ -1,0 +1,5 @@
+__name__ = 'aidapdf'
+__author__ = 'Tadeas Soucek'
+__email__ = 'tadeas.soucek@gmail.com'
+__license__ = 'MIT'
+__version__ = '0.1.0'
