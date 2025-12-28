@@ -1,6 +1,6 @@
 # Todo
 
-- [ ] Prompt for owner password when required.
+- [x] Prompt for owner password when required.
 - [ ] Rework `split` command.
 - [ ] Implement options of the `copy` command for the `split` command too.
 - [ ] Implement graphics and attachment extraction for the `extract` command.

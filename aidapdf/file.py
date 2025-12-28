@@ -185,8 +185,12 @@ class PdfFile:
     def encrypt(self, password: Optional[str], owner_password: str):
         if not self._writer_open: raise ValueError("writer closed")
         password = password or (self.owner and self.owner.password)
-        if not password: raise ValueError("no password provided")
-        if not owner_password: raise ValueError("no owner password provided")
+        if not owner_password:
+            try:
+                owner_password = getpass(f"Owner password to encrypt file {repr(str(self.path))}: ")
+            except (EOFError, KeyboardInterrupt) as e:
+                self._logger.err("no owner password provided")
+                sys.exit(1)
         self._writer.encrypt(password or self.owner.password, owner_password)
         if self.owner.password:
             self._logger.debug(f"encrypted with password taken from {self.owner} and provided owner_password ({repr_password()})")
