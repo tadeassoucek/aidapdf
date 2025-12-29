@@ -2,6 +2,7 @@ import argparse
 from argparse import BooleanOptionalAction
 
 from aidapdf import commands
+from aidapdf.config import Config
 from aidapdf.log import Logger
 
 
@@ -13,6 +14,8 @@ def main():
 
     parser.add_argument('--color', default=True, action=BooleanOptionalAction,
                         help="enable color output")
+    parser.add_argument('-r', '--raw-filenames', default=False, action=BooleanOptionalAction,
+                        help="treat filenames as raw, not as file specifiers")
 
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument('-v', '--verbose', dest="verbose_level", action='store_const', const=3,
@@ -61,10 +64,11 @@ def main():
     extract_command = sub.add_parser('extract', aliases=['x'],
                                      help="extract text, attachments and graphics from PDF file")
     extract_command.add_argument('file', help='the PDF file')
+    extract_command.add_argument('-t', '--extract-text', action="store_true", default=False)
     extract_command.add_argument('-o', '--output-file', help="text file to write the extracted text to")
     extract_command.add_argument('-m', '--extract-mode', nargs='?', default='plain',
                                  choices=['plain', 'layout'],
-                                 help="extraction mode. options are 'plain' (strip formatting) and 'layout' (maintain "
+                                 help="extraction mode. options are 'plain' (strip formatting) and 'layout' (preserve "
                                       "the original layout to the best of your ability)")
     extract_command.set_defaults(func=commands.extract)
 
@@ -107,13 +111,19 @@ def main():
     args = parser.parse_args()
 
     if "color" in args:
-        Logger.COLOR = args.color
+        Config.COLOR = args.color
 
     if "verbose_level" in args and args.verbose_level is not None:
-        Logger.LOG_LEVEL = args.verbose_level
+        Config.VERBOSITY_LEVEL = args.verbose_level
+
+    if args.raw_filenames:
+        Config.RAW_FILENAMES = args.raw_filenames
 
     if "func" in args:
         args.func(args)
+    else:
+        parser.print_help()
+        exit(1)
 
 if __name__ == '__main__':
     main()

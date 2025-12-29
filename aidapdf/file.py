@@ -9,6 +9,7 @@ import pypdf
 from pypdf import PdfReader, PageObject, PdfWriter
 from pypdf.generic import IndirectObject
 
+from aidapdf.config import Config
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
 from aidapdf.util import repr_password
@@ -18,13 +19,16 @@ from getpass import getpass
 _logger = Logger(__name__)
 
 
-def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
+def parse_file_specifier(fsp: str, treat_as_raw = False) -> Tuple[str, Optional[str], Optional[str]]:
+    if Config.RAW_FILENAMES:
+        return fsp, None, None
+
     toks = fsp.split(':')
 
     # on windows, "C:\Users\...\Downloads\file.pdf" could be interpreted as a file name "C" with "\Users\..." being
     # interpreted as the page selector. to prevent this, we check if such a file exists in the CWD and if not,
     # we assume the "[a-zA-Z]:" prefix is actually part of the path
-    if platform.system() == 'Windows' and len(toks[0]) == 1 and len(toks) > 1:
+    if Config.WINDOWS and len(toks[0]) == 1 and len(toks) > 1:
         drive = toks[0]
         # just in case: what if the user is referring to a file named "C" in the CWD?
         if not path.exists(drive):
@@ -111,6 +115,8 @@ class PdfFile:
         if self._reader is not None:
             return self._reader
         self._create_reader()
+        # useless, just here to apease the type checker
+        assert self._reader is not None
         return self._reader
 
     @contextmanager
@@ -188,7 +194,7 @@ class PdfFile:
         if not owner_password:
             try:
                 owner_password = getpass(f"Owner password to encrypt file {repr(str(self.path))}: ")
-            except (EOFError, KeyboardInterrupt) as e:
+            except (EOFError, KeyboardInterrupt):
                 self._logger.err("no owner password provided")
                 sys.exit(1)
         self._writer.encrypt(password or self.owner.password, owner_password)

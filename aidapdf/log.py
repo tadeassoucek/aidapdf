@@ -4,6 +4,8 @@ from typing import Optional
 
 import colors
 
+from aidapdf.config import Config
+
 
 class Logger:
     LEVELS = {
@@ -20,13 +22,9 @@ class Logger:
         3: "gray",
     }
 
-    COLOR = True
-
-    LOG_LEVEL = 2
-
     @staticmethod
     def _color(text: str, *args, **kwargs) -> str:
-        if Logger.COLOR and sys.stderr.isatty():
+        if Config.COLOR and sys.stderr.isatty():
             return colors.color(text, *args, **kwargs)
         else:
             return text
@@ -37,7 +35,7 @@ class Logger:
         self._name = (self.parent.name + ':' if self.parent else "") + self.name
 
     def _log(self, message: str, level: int, **kwargs) -> None:
-        if level <= Logger.LOG_LEVEL:
+        if level <= Config.VERBOSITY_LEVEL:
             prefix = f"{Logger.LEVELS[level]}:{self._name}"
             suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
             print(Logger._color(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +

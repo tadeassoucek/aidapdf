@@ -14,7 +14,6 @@ from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
 
-
 _logger = Logger(__name__)
 
 
@@ -99,12 +98,19 @@ def info(args: argparse.Namespace):
 def extract(args: argparse.Namespace):
     _logger.debug(f"extract {args}")
 
+    if not args.extract_text:
+        _logger.warn("nothing to extract specified")
+        return
+
     tup = parse_file_specifier(args.file)
     stream = open(args.output_file, mode='w+') if args.output_file else sys.stdout
     file = PdfFile(*tup)
     with file.get_reader():
-        for page in file.get_pages():
-            print(page.extract_text(extraction_mode=args.extract_mode), file=stream)
+        if args.extract_text:
+            text = ""
+            for page in file.get_pages():
+                text += page.extract_text(extraction_mode=args.extract_mode)
+            print(text, file=stream)
     if args.output_file:
         stream.close()
         _logger.info(f"wrote extracted text to {repr(args.output_file)}")
