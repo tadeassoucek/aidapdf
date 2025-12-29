@@ -64,7 +64,6 @@ def debug_parse_selector(args: argparse.Namespace):
 
 def debug_parse_specifier(args: argparse.Namespace):
     while True:
-        spec = ""
         if args.spec:
             spec = args.spec
         else:

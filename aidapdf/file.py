@@ -1,4 +1,3 @@
-import platform
 import sys
 from contextlib import contextmanager
 from os import PathLike, path
@@ -19,7 +18,7 @@ from getpass import getpass
 _logger = Logger(__name__)
 
 
-def parse_file_specifier(fsp: str, treat_as_raw = False) -> Tuple[str, Optional[str], Optional[str]]:
+def parse_file_specifier(fsp: str) -> Tuple[str, Optional[str], Optional[str]]:
     if Config.RAW_FILENAMES:
         return fsp, None, None
 

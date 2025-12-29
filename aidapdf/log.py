@@ -8,6 +8,8 @@ from aidapdf.config import Config
 
 
 class Logger:
+    name: str
+
     LEVELS = {
         0: "ERR!",
         1: "WARN",
