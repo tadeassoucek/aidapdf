@@ -4,8 +4,9 @@
 - [x] Rework `split` command.
 - [x] Implement options of the `copy` command for the `split` command too.
 - [x] Implement a `--raw-filenames` flag.
+- [x] Implement graphics extraction for the `extract` command.
+- [ ] Implement attachment extraction for the `extract` command.
 - [ ] Implement `explode` command.
-- [ ] Implement graphics and attachment extraction for the `extract` command.
 - [ ] Implement `merge` command.
 - [ ] Implement `edit` command.
 - [ ] Add an OCR option.

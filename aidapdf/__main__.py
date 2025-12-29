@@ -64,8 +64,8 @@ def main():
     extract_command = sub.add_parser('extract', aliases=['x'],
                                      help="extract text, attachments and graphics from PDF file")
     extract_command.add_argument('file', help='the PDF file')
-    extract_command.add_argument('-t', '--extract-text', action="store_true", default=False)
-    extract_command.add_argument('-o', '--output-file', help="text file to write the extracted text to")
+    extract_command.add_argument('-t', '--text-file', help="text file to write the extracted text to")
+    extract_command.add_argument('-i', '--image-file-template', help="template for the extracted image files")
     extract_command.add_argument('-m', '--extract-mode', nargs='?', default='plain',
                                  choices=['plain', 'layout'],
                                  help="extraction mode. options are 'plain' (strip formatting) and 'layout' (preserve "

@@ -97,22 +97,36 @@ def info(args: argparse.Namespace):
 def extract(args: argparse.Namespace):
     _logger.debug(f"extract {args}")
 
-    if not args.extract_text:
+    extract_text = not not args.text_file
+    text_file: str = "stdout" if args.text_file == '-' else args.text_file
+    text_file_stream = None if not extract_text else sys.stdout if text_file == "stdout" else open(args.output_file, mode='w+')
+    extract_images = not not args.image_file_template
+    image_file_template: str = "{dir}{name}-{p}-{i}-{img}" if args.image_file_template == '-' else args.image_file_template
+
+    if not extract_text and not extract_images:
         _logger.warn("nothing to extract specified")
         return
 
     tup = parse_file_specifier(args.file)
-    stream = open(args.output_file, mode='w+') if args.output_file else sys.stdout
     file = PdfFile(*tup)
     with file.get_reader():
-        if args.extract_text:
-            text = ""
-            for page in file.get_pages():
+        text = ""
+        for page in file.get_pages():
+            if extract_text:
                 text += page.extract_text(extraction_mode=args.extract_mode)
-            print(text, file=stream)
-    if args.output_file:
-        stream.close()
-        _logger.info(f"wrote extracted text to {repr(args.output_file)}")
+            if extract_images:
+                _logger.debug(f"found {len(page.images)} images on page {page.page_number+1}")
+                for i, image_object in enumerate(page.images):
+                    ext = image_object.name.split(".")[-1]
+                    fp = image_file_template.format(dir=str(file.path.parent) + os.sep, name=file.path.stem, p=page.page_number+1,
+                                                    i=i+1, img=image_object.name, ext=ext)
+                    image_object.image.save(fp)
+                    _logger.info(f"wrote image on page {page.page_number+1} to file {repr(fp)}")
+        if extract_text:
+            print(text, file=text_file_stream)
+    if extract_text:
+        text_file_stream.close()
+        _logger.info(f"wrote extracted text to {repr(text_file)}")
 
 
 def copy(args: argparse.Namespace) -> bool:
