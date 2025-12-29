@@ -201,13 +201,14 @@ class PdfFile:
         if not self._reader_open: raise ValueError("reader closed")
         return len(self._reader.pages)
 
-    def get_pages(self) -> Iterator[PageObject]:
+    def get_pages(self, selector: Optional[PageSelector] = None) -> Iterator[PageObject]:
         if not self._reader_open: raise ValueError("reader closed")
-        if self.selector is None:
+        selector = selector or self.selector
+        if selector is None:
             for page in self._reader.pages:
                 yield page
         else:
-            for i in self.selector.bake(self):
+            for i in selector.bake(self):
                 yield self._reader.get_page(i)
 
     def __repr__(self) -> str:

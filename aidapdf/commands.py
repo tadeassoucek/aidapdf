@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from pathlib import Path
 from pprint import pprint
@@ -137,35 +138,31 @@ def copy(args: argparse.Namespace) -> bool:
 def split(args: argparse.Namespace) -> bool:
     _logger.debug(f'split {args}')
 
-    if args.count <= 0:
-        _logger.err(f"count must be larger than 0 (is {args.count})")
+    if len(args.select) <= 1:
+        _logger.warn("only one selector provided; this action will only create one file which is more idiomatically "
+                     "achieved with the `copy` command")
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
     fp = Path(filename)
-    template = args.output_file_template or "{dir}/{name}-{i}.pdf"
+    template = args.output_file_template or "{dir}{name}-{i}.pdf"
 
     try:
         file = PdfFile(filename, page_spec, password)
         with file.get_reader():
-            if args.count > file.get_page_count():
-                _logger.err(f"count must be smaller or equal to the page count ({args.count} > {file.get_page_count()})")
+            for i in range(len(args.select)):
+                selector = PageSelector.parse(args.select[i])
+                ofp = template.format(dir=str(fp.parent) + os.sep, name=fp.stem, ext=fp.suffix,
+                                                        i=i+1)
+                outfile = PdfFile(ofp, owner=file)
 
-            outfiles: list[PdfFile] = []
-            for i in range(args.count):
-                outfiles.append(PdfFile(template.format(dir=fp.parent, name=fp.stem, ext=fp.suffix, i=i+1), owner=file))
-                _logger.info(f"output file {i+1}: {outfiles[-1]}")
+                with outfile.get_writer() as writer:
+                    for page in file.get_pages(selector):
+                        writer.add_page(page)
 
-            i = 0
-            for page in file.get_pages():
-                outfiles[i % args.count].get_writer_unsafe().add_page(page)
-                i += 1
-
-            for f in outfiles:
-                if args.copy_metadata:
-                    f.copy_metadata_from_owner()
-                if args.owner_password:
-                    f.encrypt(args.owner_password)
-                f.close_writer()
+                    if args.copy_metadata:
+                        outfile.copy_metadata_from_owner()
+                    if args.owner_password:
+                        outfile.encrypt(args.owner_password)
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False
