@@ -32,32 +32,54 @@ def debug_testlog(_: argparse.Namespace) -> None:
     _logger.err("message", s="Hello world!", i=10)
 
 
-def debug_parse(args: argparse.Namespace):
+def debug_parse_selector(args: argparse.Namespace):
     bake_file: PdfFile | None = None
     if args.file:
         (filename, _, password) = parse_file_specifier(args.file)
         bake_file = PdfFile(filename, None, password)
         bake_file.get_reader_unsafe()
 
-    try:
-        while True:
-            if args.select:
-                select = args.select
-            else:
-                select = input((bake_file.path.name if bake_file else '') + '> ')
+    while True:
+        raw_select = ""
 
-            select = PageSelector.parse(select)
-            print(select)
-            if bake_file:
-                pprint(list(map(lambda x: x+1, select.bake(bake_file))))
-
-            if args.select:
+        if args.select:
+            raw_select = args.select
+        else:
+            try:
+                raw_select = input((bake_file.path.name if bake_file else '') + '> ')
+            except (EOFError, KeyboardInterrupt):
+                print()
                 break
-    except (EOFError, KeyboardInterrupt):
-        print()
-    finally:
+            finally:
+                if bake_file:
+                    bake_file.close_reader()
+
+        select = PageSelector.parse(raw_select)
+        print(select)
         if bake_file:
-            bake_file.close_reader()
+            pprint(list(map(lambda x: x+1, select.bake(bake_file))))
+
+        if args.select:
+            break
+
+
+def debug_parse_specifier(args: argparse.Namespace):
+    while True:
+        spec = ""
+        if args.spec:
+            spec = args.spec
+        else:
+            try:
+                spec = input('> ')
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+
+        path, selector, password = parse_file_specifier(spec)
+        print(f"path = {repr(path)}, selector = {repr(selector)}, password = {repr(password)}")
+
+        if args.spec:
+            break
 
 
 def info(args: argparse.Namespace):
