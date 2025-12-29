@@ -169,22 +169,27 @@ def split(args: argparse.Namespace) -> bool:
     template = args.output_file_template or "{dir}{name}-{i}.pdf"
 
     try:
-        file = PdfFile(filename, page_spec, password)
+        # input file
+        file = PdfFile(filename, page_spec, args.password or password)
         with file.get_reader():
             for i in range(len(args.select)):
                 selector = PageSelector.parse(args.select[i])
                 ofp = template.format(dir=str(fp.parent) + os.sep, name=fp.stem, ext=fp.suffix,
                                                         i=i+1)
+                # output file
                 outfile = PdfFile(ofp, owner=file)
 
                 with outfile.get_writer() as writer:
+                    # copy selected pages
                     for page in file.get_pages(selector):
                         writer.add_page(page)
 
                     if args.copy_metadata:
                         outfile.copy_metadata_from_owner()
-                    if args.owner_password:
-                        outfile.encrypt(args.owner_password)
+                    if (args.copy_password and file.password) or args.owner_password:
+                        outfile.encrypt(args.password, args.owner_password)
+
+                _logger.info(f"wrote to {repr(str(outfile.path))}")
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False

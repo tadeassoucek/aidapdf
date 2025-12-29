@@ -40,7 +40,7 @@ def parse_file_specifier(fsp: str) -> Tuple[str, str, str]:
         password = toks[2] or None
 
     _logger.debug(f'file specifier parsed as {repr(filename)}; selector={repr(selector)}; '
-                  f'password={repr_password() if password else ''}')
+                  f'password={repr_password(password)}')
 
     return filename, selector, password
 
@@ -193,7 +193,8 @@ class PdfFile:
                 sys.exit(1)
         self._writer.encrypt(password or self.owner.password, owner_password)
         if self.owner.password:
-            self._logger.debug(f"encrypted with password taken from {self.owner} and provided owner_password ({repr_password()})")
+            self._logger.debug(f"encrypted with password taken from {self.owner} and provided owner_password "
+                               f"({repr_password(owner_password)})")
         else:
             self._logger.debug("encrypted with the provided passwords")
 

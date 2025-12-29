@@ -98,8 +98,10 @@ def main():
     split_command.add_argument("file")
     split_command.add_argument('select', nargs="+", help="selected pages")
     split_command.add_argument("-o", "--output-file-template", nargs="?")
+    split_command.add_argument("-p", "--password", nargs="?")
     split_command.add_argument("-P", "--owner-password", nargs="?")
-    split_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction)
+    split_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction, default=True)
+    split_command.add_argument('--copy-password', action=argparse.BooleanOptionalAction, default=True)
     split_command.set_defaults(func=commands.split)
 
     args = parser.parse_args()

@@ -2,10 +2,11 @@ import random
 import subprocess
 import platform
 import os
+from typing import Optional
 
 
-def repr_password() -> str:
-    return repr('*' * random.randint(4, 10))
+def repr_password(passwd: Optional[str]) -> str:
+    return repr('*' * 8) if passwd else 'None'
 
 
 def open_file(filepath: str | os.PathLike):
