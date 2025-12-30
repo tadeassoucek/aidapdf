@@ -6,7 +6,7 @@
 - [x] Implement a `--raw-filenames` flag.
 - [x] Implement graphics extraction for the `extract` command.
 - [ ] Implement attachment extraction for the `extract` command.
-- [ ] Implement `explode` command.
+- [x] Implement `explode` command.
 - [ ] Implement `merge` command.
 - [ ] Implement `edit` command.
 - [ ] Add an OCR option.

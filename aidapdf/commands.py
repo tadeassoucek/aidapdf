@@ -220,3 +220,48 @@ def split(args: argparse.Namespace) -> bool:
         return False
 
     return True
+
+
+def explode(args: argparse.Namespace) -> bool:
+    _logger.debug(f"explode {args}")
+
+    count: int = args.count
+    if count < 1:
+        _logger.err("count must be >= 1")
+        return False
+
+    (filename, page_selector, password) = parse_file_specifier(args.file)
+    template = args.output_file_template or "{dir}{name}-{i}.pdf"
+
+    try:
+        file = PdfFile(filename, args.select or page_selector, args.password or password)
+        with (file.get_reader()):
+            file_count = file.get_page_count() // count
+            outfiles: list[PdfFile] = []
+            page_limit = file_count * count
+            # create files
+            for i in range(file_count):
+                fp = template.format(dir=str(file.path.parent) + os.sep, name=file.path.stem, ext=file.path.suffix, i=i+1)
+                outfiles.append(PdfFile(fp, owner=file))
+            # write pages to file
+            file_idx = 0
+            for i, page in enumerate(file.get_pages()):
+                outfiles[file_idx % file_count].get_writer_unsafe().add_page(page)
+                if (i+1) % count == 0:
+                    file_idx += 1
+                if i+1 >= page_limit:
+                    break
+            # close file writers
+            for out in outfiles:
+                out.close_writer()
+    except WrongPasswordError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
+        return False
+    except FileNotDecryptedError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]} (no password provided)")
+        return False
+    except PdfReadError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]}")
+        return False
+
+    return True

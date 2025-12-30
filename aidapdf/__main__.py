@@ -108,6 +108,17 @@ def main():
     split_command.add_argument('--copy-password', action=argparse.BooleanOptionalAction, default=True)
     split_command.set_defaults(func=commands.split)
 
+    explode_command = sub.add_parser("explode", help="divides the PDF file into files of N pages each")
+    explode_command.add_argument("file")
+    explode_command.add_argument('count', type=int, default=1, nargs="?", help="number of pages per file")
+    explode_command.add_argument('-s', '--select', nargs="?", help="page selector")
+    explode_command.add_argument("-o", "--output-file-template", nargs="?")
+    explode_command.add_argument("-p", "--password", nargs="?")
+    explode_command.add_argument("-P", "--owner-password", nargs="?")
+    explode_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction, default=True)
+    explode_command.add_argument('--copy-password', action=argparse.BooleanOptionalAction, default=True)
+    explode_command.set_defaults(func=commands.explode)
+
     args = parser.parse_args()
 
     if "color" in args:
