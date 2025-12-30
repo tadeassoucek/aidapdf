@@ -15,6 +15,7 @@ from aidapdf.util import repr_password
 
 from getpass import getpass
 
+
 _logger = Logger(__name__)
 
 
@@ -98,7 +99,7 @@ class PdfFile:
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
         """
-        Creates a reader. Use with a `with` statement.
+        Create a reader. Use with a `with` statement.
         :return: The created `PdfReader` object.
         """
 
@@ -112,8 +113,8 @@ class PdfFile:
 
     def get_reader_unsafe(self) -> PdfReader:
         """
-        If a reader already exists, returns it. Otherwise, creates a new one.
-        Should only be used when you can't use `get_reader()`. Don't forget to call `close_reader()` after you're finished.
+        If a reader already exists, return it. Otherwise, create a new one. Should only be used when you can't use
+        `get_reader()`. Don't forget to call `close_reader()` after you're finished.
         :return: The already open or newly created `PdfReader` object.
         """
 
@@ -126,6 +127,11 @@ class PdfFile:
 
     @contextmanager
     def get_writer(self) -> Generator[PdfWriter, None, None]:
+        """
+        Create a reader. Use with a `with` statement.
+        :return: The created `PdfReader` object.
+        """
+
         if self._writer_open: raise ValueError("writer already open")
 
         try:
@@ -137,6 +143,12 @@ class PdfFile:
             self.close_writer()
 
     def get_writer_unsafe(self) -> PdfWriter:
+        """
+        If a writer already exists, return it. Otherwise, create a new one. Should only be used when you can't use
+        `get_writer()`. Don't forget to call `close_writer()` after you're finished.
+        :return: The already open or newly created `PdfReader` object.
+        """
+
         if self._writer is not None:
             return self._writer
         self._writer = PdfWriter()
@@ -145,8 +157,10 @@ class PdfFile:
         return self._writer
 
     def close_reader(self) -> None:
+        """Closes and disposes of the reader. Raises a `ValueError if no reader is open."""
+
         if self._reader is None or not self._reader_open:
-            return
+            raise ValueError("close_reader() called but no reader is open")
 
         self._reader.close()
         self._reader = None
@@ -155,8 +169,10 @@ class PdfFile:
         self._reader = None
 
     def close_writer(self) -> None:
+        """Closes and disposes of the writer. Raises a `ValueError` if no writer is open."""
+
         if self._writer is None or not self._writer_open:
-            raise ValueError(f"{self}.close_writer() called but no writer is open")
+            raise ValueError("close_writer() called but no writer is open")
 
         self._writer.write(self.path)
         self._writer_open = False
@@ -165,21 +181,31 @@ class PdfFile:
         self._writer = None
 
     def copy_metadata_from_owner(self) -> None:
+        """Copies metadata from the owner file. The writer has to be opened."""
         if not self._writer_open: raise ValueError("writer closed")
-        self._writer.add_metadata(self.owner.get_metadata())
-        self._logger.debug(f"copied metadata from {self.owner}")
+        metadata = self.owner.get_metadata()
+        self._writer.add_metadata(metadata)
+        self._logger.debug(f"copied metadata from {self.owner}: {metadata}")
 
     def add_metadata(self, metadata: dict[str, Any]) -> None:
+        """Add metadata. The writer has to be opened."""
         if not self._writer_open: raise ValueError("writer closed")
         self._writer.add_metadata(metadata)
         self._logger.debug(f"added metadata {metadata}")
 
     def add_blank_page(self) -> None:
+        """Add a blank page to the end of the file. The writer has to be opened."""
         if not self._writer_open: raise ValueError("writer closed")
         self._writer.add_blank_page()
         self._logger.debug(f"added blank page")
 
     def insert_blank_page(self, index: int) -> None:
+        """
+        Insert a blank page at the given index. The writer has to be opened.
+        :param index: Index to insert a blank page at. If >= the page count, behaves like `add_blank_page()`.
+        :return:
+        """
+
         if not self._writer_open: raise ValueError("writer closed")
         if index >= len(self._writer.pages):
             self._writer.add_blank_page()
@@ -188,6 +214,13 @@ class PdfFile:
         self._logger.debug(f"inserted blank page @ {index}")
 
     def pad_pages(self, to: int, where: Literal['start', 'end'] = 'end') -> None:
+        """
+        Add blank pages until the file has `to` pages.
+        :param to: Target number of pages.
+        :param where: Where to add the blank pages. If `start`, they're added to the beginning, if `end` , they're
+        appended to the end.
+        """
+
         if not self._writer_open: raise ValueError("writer closed")
         diff = to - self.get_page_count()
         if diff > 0:
@@ -199,6 +232,11 @@ class PdfFile:
         self._logger.info(f"padded pages to {to}")
 
     def get_metadata(self, resolve = False) -> dict[str, Any]:
+        """
+        Return the metadata of the file. The writer has to be opened.
+        :param resolve: If `True`, resolves indirect objects.
+        """
+
         if not self._reader_open: raise ValueError("reader closed")
         meta_raw = self._reader.metadata
         if resolve:
@@ -209,9 +247,16 @@ class PdfFile:
         else:
             return meta_raw
 
-    def encrypt(self, password: Optional[str], owner_password: str):
+    def encrypt(self, owner_password: str, password: Optional[str] = None) -> None:
+        """
+        Encrypts the file with the provided passwords. The writer has to be opened.
+        :param owner_password: Password to change the encryption and permissions of the file.
+        :param password: Password to access the file. If `None`, the value is taken from `self.password`.
+        """
+
         if not self._writer_open: raise ValueError("writer closed")
         password = password or (self.owner and self.owner.password)
+        # prompt for owner password if not provided
         if not owner_password:
             try:
                 owner_password = getpass(f"Owner password to encrypt file {repr(str(self.path))}: ")
@@ -226,10 +271,19 @@ class PdfFile:
             self._logger.debug("encrypted with the provided passwords")
 
     def get_page_count(self) -> int:
+        """
+        Return number of pages in the file. Presupposes that the reader is opened.
+        """
+
         if not self._reader_open: raise ValueError("reader closed")
         return len(self._reader.pages)
 
     def get_pages(self, selector: Optional[PageSelector] = None) -> Iterator[PageObject]:
+        """
+        Iterates over selected pages. Presupposes that the reader is opened.
+        :param selector: Selector override.
+        """
+
         if not self._reader_open: raise ValueError("reader closed")
         selector = selector or self.selector
         if selector is None:

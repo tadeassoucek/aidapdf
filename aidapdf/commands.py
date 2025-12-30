@@ -189,7 +189,7 @@ def edit(args: argparse.Namespace) -> bool:
             if args.copy_metadata:
                 out.copy_metadata_from_owner()
             if (args.copy_password and file.password) or args.owner_password:
-                out.encrypt(args.password, args.owner_password)
+                out.encrypt(args.owner_password, args.password)
 
         if file.path == out.path:
             _logger.info(f"edited file {repr(filename)} ({util.pluralize(page_count, 'page')})")
@@ -246,7 +246,7 @@ def split(args: argparse.Namespace) -> bool:
                     if args.copy_metadata:
                         outfile.copy_metadata_from_owner()
                     if (args.copy_password and file.password) or args.owner_password:
-                        outfile.encrypt(args.password, args.owner_password)
+                        outfile.encrypt(args.owner_password, args.password)
 
                 _logger.info(f"wrote to {repr(str(outfile.path))}")
     except WrongPasswordError as e:
@@ -301,7 +301,7 @@ def explode(args: argparse.Namespace) -> bool:
                 if args.copy_metadata:
                     out.copy_metadata_from_owner()
                 if (args.copy_password and file.password) or args.owner_password:
-                    out.encrypt(args.password, args.owner_password)
+                    out.encrypt(args.owner_password, args.password,)
 
                 out.close_writer()
     except WrongPasswordError as e:

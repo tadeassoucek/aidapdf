@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aidapdf"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
   { name="Tadeas Soucek", email="tadeas.soucek@gmail.com" },
 ]
@@ -17,6 +17,9 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICENSE"]
+
+[tool.setuptools]
+py-modules = []
 
 [project.urls]
 Homepage = "https://github.com/tadeassoucek/aidapdf"
