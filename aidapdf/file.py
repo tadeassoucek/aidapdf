@@ -2,7 +2,7 @@ import sys
 from contextlib import contextmanager
 from os import PathLike, path
 from pathlib import Path
-from typing import Iterator, Generator, Tuple, Any, Optional
+from typing import Iterator, Generator, Tuple, Any, Optional, Literal
 
 import pypdf
 from pypdf import PdfReader, PageObject, PdfWriter
@@ -187,10 +187,21 @@ class PdfFile:
             self._writer.insert_blank_page(None, None, index)
         self._logger.debug(f"inserted blank page @ {index}")
 
-    def get_metadata(self, printable = False) -> dict[str, Any]:
+    def pad_pages(self, to: int, where: Literal['start', 'end'] = 'end') -> None:
+        if not self._writer_open: raise ValueError("writer closed")
+        diff = to - self.get_page_count()
+        if diff > 0:
+            for i in range(diff):
+                if where == 'end':
+                    self.add_blank_page()
+                else:
+                    self.insert_blank_page(0)
+        self._logger.info(f"padded pages to {to}")
+
+    def get_metadata(self, resolve = False) -> dict[str, Any]:
         if not self._reader_open: raise ValueError("reader closed")
         meta_raw = self._reader.metadata
-        if printable:
+        if resolve:
             meta = {}
             for k, v in meta_raw.items():
                 meta[k] = str(v) if isinstance(v, IndirectObject) else v

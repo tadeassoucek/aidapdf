@@ -98,6 +98,8 @@ def main():
     pad_group.add_argument('--pad-to', type=int, help="pad pages to page count")
     pad_group.add_argument('--pad-to-even', action='store_true', help="pad pages to even")
     pad_group.add_argument('--pad-to-odd', action='store_true', help="pad pages to odd")
+    copy_command.add_argument('--pad-where', choices=['start', 'end'], default='end',
+                              help="where to add blank pages when padding")
     copy_command.add_argument('-w', '--preview', action="store_true",
                               help="open the created file in the default program")
     copy_command.set_defaults(func=commands.copy)

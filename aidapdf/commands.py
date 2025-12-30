@@ -92,7 +92,7 @@ def info(args: argparse.Namespace) -> bool:
     with file.get_reader():
         pages = file.get_page_count()
         print_target("pages", "Pages", pages)
-        print_target("metadata", "Metadata", file.get_metadata(printable=True))
+        print_target("metadata", "Metadata", file.get_metadata(resolve=True))
 
     return True
 
@@ -178,15 +178,12 @@ def copy(args: argparse.Namespace) -> bool:
             page_count = file.get_page_count()
             if args.pad_to:
                 if args.pad_to <= page_count:
-                    _logger.warn(f"file has {util.pluralize(page_count, 'page')}, which is <= --pad-to {args.pad_to}")
+                    _logger.warn(f"file has {util.pluralize(page_count, 'page')}, "
+                                 f"which is <= --pad-to {args.pad_to}")
                 else:
-                    for i in range(args.pad_to - page_count):
-                        out.add_blank_page()
-            else:
-                if args.pad_to_odd and page_count % 2 == 0:
-                    out.add_blank_page()
-                elif args.pad_to_even and page_count % 2 == 1:
-                    out.add_blank_page()
+                    out.pad_pages(args.pad_to, args.pad_where)
+            elif (args.pad_to_odd and page_count % 2 == 0) or (args.pad_to_even and page_count % 2 == 1):
+                out.pad_pages(page_count + 1, args.pad_where)
 
             if args.copy_metadata:
                 out.copy_metadata_from_owner()
