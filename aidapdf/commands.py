@@ -253,6 +253,11 @@ def explode(args: argparse.Namespace) -> bool:
                     break
             # close file writers
             for out in outfiles:
+                if args.copy_metadata:
+                    out.copy_metadata_from_owner()
+                if (args.copy_password and file.password) or args.owner_password:
+                    out.encrypt(args.password, args.owner_password)
+
                 out.close_writer()
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
