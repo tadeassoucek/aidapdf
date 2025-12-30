@@ -28,19 +28,20 @@ def main():
 
     sub = parser.add_subparsers()
 
+    # Debug commands
     debug_command = sub.add_parser("debug", aliases=['dbg'], help="debug command")
     debug_sub = debug_command.add_subparsers()
 
-    testlog_command = debug_sub.add_parser("testlog", help="test the log command")
+    testlog_command = debug_sub.add_parser("log", help="test the log command")
     testlog_command.set_defaults(func=commands.debug_testlog)
 
-    parse_selector_command = debug_sub.add_parser("parseselector", help="parse and show page selector")
+    parse_selector_command = debug_sub.add_parser("selector", help="parse and show page selector")
     parse_selector_command.add_argument("select", nargs='?', help="page selector. if none is specified, "
                                                          "enters interactive mode")
     parse_selector_command.add_argument("-f", "--file", nargs='?', help="file to use as a bake file")
     parse_selector_command.set_defaults(func=commands.debug_parse_selector)
 
-    parse_specifier_command = debug_sub.add_parser("parsespecifier", aliases=['parsespec'],
+    parse_specifier_command = debug_sub.add_parser("specifier", aliases=['spec'],
                                                    help="parse and show file specifier")
     parse_specifier_command.add_argument("spec", nargs='?', help="file specifier")
     parse_specifier_command.set_defaults(func=commands.debug_parse_specifier)
@@ -65,8 +66,10 @@ def main():
     extract_command = sub.add_parser('extract', aliases=['x'],
                                      help="extract text, attachments and graphics from PDF file")
     extract_command.add_argument('file', help='the PDF file')
-    extract_command.add_argument('-t', '--text-file', help="text file to write the extracted text to")
-    extract_command.add_argument('-i', '--image-file-template', help="template for the extracted image files")
+    extract_command.add_argument('-t', '--text-file', nargs="?", default='-',
+                                 help="text file to write the extracted text to")
+    extract_command.add_argument('-i', '--image-file-template', default="{dir}{name}-{p:03}-{i:03}-{img}",
+                                 nargs='?', help="template for the extracted image files")
     extract_command.add_argument('-m', '--extract-mode', nargs='?', default='plain',
                                  choices=['plain', 'layout'],
                                  help="extraction mode. options are 'plain' (strip formatting) and 'layout' (preserve "
@@ -128,8 +131,9 @@ def main():
     args = parser.parse_args()
 
     Config.COLOR = args.color
-    Config.VERBOSITY_LEVEL = args.verbose_level
     Config.RAW_FILENAMES = args.raw_filenames
+    if "verbose_level" in args and args.verbose_level is not None:
+        Config.VERBOSITY_LEVEL = args.verbose_level
 
     if "func" in args:
         if not args.func(args):

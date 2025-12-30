@@ -104,32 +104,41 @@ def extract(args: argparse.Namespace) -> bool:
     text_file: str = "stdout" if args.text_file == '-' else args.text_file
     text_file_stream = None if not extract_text else sys.stdout if text_file == "stdout" else open(args.output_file, mode='w+')
     extract_images = not not args.image_file_template
-    image_file_template: str = "{dir}{name}-{p}-{i}-{img}" if args.image_file_template == '-' else args.image_file_template
+    image_file_template: str = args.image_file_template
 
     if not extract_text and not extract_images:
         _logger.warn("nothing to extract specified")
         return False
 
-    tup = parse_file_specifier(args.file)
-    file = PdfFile(*tup)
-    with file.get_reader():
-        text = ""
-        for page in file.get_pages():
+    try:
+        filename, page_spec, password = parse_file_specifier(args.file)
+    except FileNotFoundError as e:
+        _logger.err(e.args[0])
+        return False
+
+    try:
+        file = PdfFile(filename, page_spec, password)
+        with file.get_reader():
+            text = ""
+            for page in file.get_pages():
+                if extract_text:
+                    text += page.extract_text(extraction_mode=args.extract_mode)
+                if extract_images:
+                    _logger.debug(f"found {len(page.images)} images on page {page.page_number+1}")
+                    for i, image_object in enumerate(page.images):
+                        ext = image_object.name.split(".")[-1]
+                        fp = image_file_template.format(dir=str(file.path.parent) + os.sep, name=file.path.stem, p=page.page_number+1,
+                                                        i=i+1, img=image_object.name, ext=ext)
+                        image_object.image.save(fp)
+                        _logger.info(f"wrote image on page {page.page_number+1} to file {repr(fp)}")
             if extract_text:
-                text += page.extract_text(extraction_mode=args.extract_mode)
-            if extract_images:
-                _logger.debug(f"found {len(page.images)} images on page {page.page_number+1}")
-                for i, image_object in enumerate(page.images):
-                    ext = image_object.name.split(".")[-1]
-                    fp = image_file_template.format(dir=str(file.path.parent) + os.sep, name=file.path.stem, p=page.page_number+1,
-                                                    i=i+1, img=image_object.name, ext=ext)
-                    image_object.image.save(fp)
-                    _logger.info(f"wrote image on page {page.page_number+1} to file {repr(fp)}")
+                print(text, file=text_file_stream)
         if extract_text:
-            print(text, file=text_file_stream)
-    if extract_text:
-        text_file_stream.close()
-        _logger.info(f"wrote extracted text to {repr(text_file)}")
+            text_file_stream.close()
+            _logger.info(f"wrote extracted text to {repr(text_file)}")
+    except PdfReadError as e:
+        _logger.err(f"{repr(filename)}: {e.args[0]}")
+        return False
 
     return True
 
@@ -137,8 +146,14 @@ def extract(args: argparse.Namespace) -> bool:
 def copy(args: argparse.Namespace) -> bool:
     _logger.debug(f"copy {args}")
 
-    (filename, page_selector, password) = parse_file_specifier(args.file)
+    try:
+        (filename, page_selector, password) = parse_file_specifier(args.file)
+    except FileNotFoundError as e:
+        _logger.err(e.args[0])
+        return False
+
     blank_pages = PageSelector.parse(args.add_blank) if args.add_blank else None
+
     try:
         if args.select: page_selector = PageSelector.parse(args.select)
         # open in file
@@ -188,7 +203,12 @@ def split(args: argparse.Namespace) -> bool:
         _logger.warn("only one selector provided; this action will only create one file which is more idiomatically "
                      "achieved with the `copy` command")
 
-    (filename, page_spec, password) = parse_file_specifier(args.file)
+    try:
+        (filename, page_spec, password) = parse_file_specifier(args.file)
+    except FileNotFoundError as e:
+        _logger.err(e.args[0])
+        return False
+
     fp = Path(filename)
     template = args.output_file_template
 
@@ -235,7 +255,12 @@ def explode(args: argparse.Namespace) -> bool:
         _logger.err("count must be >= 1")
         return False
 
-    (filename, page_selector, password) = parse_file_specifier(args.file)
+    try:
+        (filename, page_selector, password) = parse_file_specifier(args.file)
+    except FileNotFoundError as e:
+        _logger.err(e.args[0])
+        return False
+
     template = args.output_file_template
 
     try:
@@ -287,7 +312,12 @@ def merge(args: argparse.Namespace) -> bool:
         _logger.warn("only one file provided; this action will only create one file which is more idiomatically "
                      "achieved with the `copy` command")
 
-    fsps: list[tuple[str, Optional[str], Optional[str]]] = list(map(parse_file_specifier, args.file))
+    try:
+        fsps: list[tuple[str, Optional[str], Optional[str]]] = list(map(parse_file_specifier, args.file))
+    except FileNotFoundError as e:
+        _logger.err(e.args[0])
+        return False
+
     outfile = PdfFile(args.output_file, owner=None)
 
     with outfile.get_writer() as writer:

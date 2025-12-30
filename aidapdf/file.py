@@ -18,9 +18,15 @@ from getpass import getpass
 _logger = Logger(__name__)
 
 
+def check_filename(fp: str) -> str:
+    if not Path(fp).is_file():
+        raise FileNotFoundError(f"file {fp} not found")
+    return fp
+
+
 def parse_file_specifier(fsp: str) -> Tuple[str, Optional[str], Optional[str]]:
     if Config.RAW_FILENAMES:
-        return fsp, None, None
+        return check_filename(fsp), None, None
 
     toks = fsp.split(':')
 
@@ -45,7 +51,7 @@ def parse_file_specifier(fsp: str) -> Tuple[str, Optional[str], Optional[str]]:
     _logger.debug(f'file specifier parsed as {repr(filename)}; selector={repr(selector)}; '
                   f'password={repr_password(password)}')
 
-    return filename, selector, password
+    return check_filename(filename), selector, password
 
 
 class PdfFile:
