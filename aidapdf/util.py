@@ -15,3 +15,7 @@ def open_file(filepath: str | os.PathLike):
         os.startfile(filepath)
     else:  # linux variants
         subprocess.call(('xdg-open', filepath))
+
+
+def pluralize(n: int, noun: str) -> str:
+    return f"{n} {noun}" + ("s" if n > 1 else "")

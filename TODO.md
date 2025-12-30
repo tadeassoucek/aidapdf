@@ -7,7 +7,7 @@
 - [x] Implement graphics extraction for the `extract` command.
 - [ ] Implement attachment extraction for the `extract` command.
 - [x] Implement `explode` command.
-- [ ] Implement `merge` command.
+- [x] Implement `merge` command.
 - [ ] Implement `edit` command.
 - [ ] Add an OCR option.
 - [ ] Add unit tests.

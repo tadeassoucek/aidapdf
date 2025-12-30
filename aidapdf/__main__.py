@@ -119,6 +119,13 @@ def main():
     explode_command.add_argument('--copy-password', action=argparse.BooleanOptionalAction, default=True)
     explode_command.set_defaults(func=commands.explode)
 
+    merge_command = sub.add_parser("merge", aliases=["m"], help="meges multiple PDF files")
+    merge_command.add_argument("file", nargs="+")
+    merge_command.add_argument("-o", "--output-file")
+    merge_command.add_argument("-p", "--password", nargs="?")
+    merge_command.add_argument("-P", "--owner-password", nargs="?")
+    merge_command.set_defaults(func=commands.merge)
+
     args = parser.parse_args()
 
     if "color" in args:

@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 from pprint import pprint
-from typing import Any
+from typing import Any, Optional
 
 from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
@@ -231,7 +231,7 @@ def explode(args: argparse.Namespace) -> bool:
         return False
 
     (filename, page_selector, password) = parse_file_specifier(args.file)
-    template = args.output_file_template or "{dir}{name}-{i}.pdf"
+    template = args.output_file_template or "{dir}{name}-{i:03}.pdf"
 
     try:
         file = PdfFile(filename, args.select or page_selector, args.password or password)
@@ -268,5 +268,32 @@ def explode(args: argparse.Namespace) -> bool:
     except PdfReadError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]}")
         return False
+
+    return True
+
+
+def merge(args: argparse.Namespace) -> bool:
+    _logger.debug(f"merge {args}")
+
+    if len(args.file) < 1:
+        _logger.err("need more than one input file")
+        return False
+    elif len(args.file) == 1:
+        _logger.warn("only one file provided; this action will only create one file which is more idiomatically "
+                     "achieved with the `copy` command")
+
+    fsps: list[tuple[str, Optional[str], Optional[str]]] = list(map(parse_file_specifier, args.file))
+    outfile = PdfFile(args.output_file, owner=None)
+
+    with outfile.get_writer() as writer:
+        for fsp in fsps:
+            file = PdfFile(fsp[0], selector=fsp[1], password=fsp[2] or args.password)
+            pages_written = 0
+            with file.get_reader():
+                for page in file.get_pages():
+                    writer.add_page(page)
+                    pages_written += 1
+            _logger.info(f"wrote {util.pluralize(pages_written, 'page')} from {repr(str(file.path))} to " +
+                         repr(str(outfile.path)))
 
     return True
