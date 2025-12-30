@@ -8,6 +8,7 @@
 - [ ] Implement attachment extraction for the `extract` command.
 - [x] Implement `explode` command.
 - [x] Implement `merge` command.
-- [ ] Implement `edit` command.
+- [x] Rename `copy` command to `edit`.
+- [ ] Add checks for file creation errors.
 - [ ] Add an OCR option.
 - [ ] Add unit tests.

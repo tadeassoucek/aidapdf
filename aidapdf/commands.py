@@ -143,7 +143,7 @@ def extract(args: argparse.Namespace) -> bool:
     return True
 
 
-def copy(args: argparse.Namespace) -> bool:
+def edit(args: argparse.Namespace) -> bool:
     _logger.debug(f"copy {args}")
 
     try:
@@ -152,14 +152,15 @@ def copy(args: argparse.Namespace) -> bool:
         _logger.err(e.args[0])
         return False
 
+    output_file = filename if args.output_file == '-' else args.output_file
     blank_pages = PageSelector.parse(args.add_blank) if args.add_blank else None
 
     try:
         if args.select: page_selector = PageSelector.parse(args.select)
         # open in file
-        file = PdfFile(filename, page_selector, password)
+        file = PdfFile(filename, page_selector, args.password or password)
         # open out file
-        out = PdfFile(args.output_file, owner=file)
+        out = PdfFile(output_file, owner=file)
 
         # open writer
         with file.get_reader(), out.get_writer() as writer:
@@ -190,7 +191,11 @@ def copy(args: argparse.Namespace) -> bool:
             if (args.copy_password and file.password) or args.owner_password:
                 out.encrypt(args.password, args.owner_password)
 
-        _logger.info(f"copied {repr(filename)} to {repr(str(out.path))}")
+        if file.path == out.path:
+            _logger.info(f"edited file {repr(filename)} ({util.pluralize(page_count, 'page')})")
+        else:
+            _logger.info(f"copied {repr(filename)} to {repr(str(out.path))} "
+                         '(' + util.pluralize(page_count, 'page') + ')')
 
         if args.preview:
             util.open_file(out.path)
