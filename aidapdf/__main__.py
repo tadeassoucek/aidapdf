@@ -77,17 +77,18 @@ def main():
     extract_command.set_defaults(func=commands.extract)
 
     edit_command = sub.add_parser("edit", aliases=["e"],
-                                  help="edits the PDF file")
+                                  help="edit the PDF file")
     edit_command.add_argument("file", help="the original PDF file")
     edit_command.add_argument("-o", "--output-file", nargs='?', default='-',
                               help="don't rewrite the input file and write the new PDF file here")
     edit_command.add_argument("-s", "--select", nargs="?", help="selected pages")
     edit_command.add_argument('--copy-password', default=True, action=argparse.BooleanOptionalAction,
                               help="if the input file is protected by a password, protect the new file with the same "
-                                   "password. if set and there is a password to copy, an owner password must be provided"
+                                   "password. if set and there is a password to copy, an owner password must be provided "
                                    "with the --owner-password option. on by default")
     edit_command.add_argument("-p", "--password", nargs="?",
-                              help="password to protect the new file with. supercedes --copy-password option")
+                              help="password to decrypt the input file with. if --copy-password is set, the output file "
+                                   "is encrypted using this password")
     edit_command.add_argument("-P", "--owner-password", nargs="?",
                               help="owner password to protect the new file with")
     edit_command.add_argument('--copy-metadata', default=True, action=argparse.BooleanOptionalAction,
