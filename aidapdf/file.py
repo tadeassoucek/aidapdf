@@ -174,6 +174,11 @@ class PdfFile:
         self._writer.add_metadata(metadata)
         self._logger.debug(f"added metadata {metadata}")
 
+    def add_blank_page(self) -> None:
+        if not self._writer_open: raise ValueError("writer closed")
+        self._writer.add_blank_page()
+        self._logger.debug(f"added blank page")
+
     def insert_blank_page(self, index: int) -> None:
         if not self._writer_open: raise ValueError("writer closed")
         if index >= len(self._writer.pages):

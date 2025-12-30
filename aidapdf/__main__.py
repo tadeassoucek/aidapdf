@@ -79,8 +79,8 @@ def main():
     copy_command = sub.add_parser("copy", aliases=["c"],
                                   help="creates a copy of the PDF file with the requested modifications")
     copy_command.add_argument("file", help="the original PDF file")
-    copy_command.add_argument("-o", "--output-file", help="the new PDF file. as of now, this is "
-                                                          "required, as pypdf can't write to stdout")
+    copy_command.add_argument("-o", "--output-file", required=True,
+                              help="the new PDF file. as of now, this is required, as pypdf can't write to stdout")
     copy_command.add_argument("-s", "--select", nargs="?", help="selected pages")
     copy_command.add_argument('--copy-password', default=True, action=argparse.BooleanOptionalAction,
                               help="if the input file is protected by a password, protect the new file with the same "
@@ -94,6 +94,10 @@ def main():
                               help="copy metadata from the original file to the new one. on by default")
     copy_command.add_argument('--reverse', action="store_true", help="reverse the order of the pages")
     copy_command.add_argument('-b', '--add-blank', nargs='?', help="blank pages to add")
+    pad_group = copy_command.add_mutually_exclusive_group(required=False)
+    pad_group.add_argument('--pad-to', type=int, help="pad pages to page count")
+    pad_group.add_argument('--pad-to-even', action='store_true', help="pad pages to even")
+    pad_group.add_argument('--pad-to-odd', action='store_true', help="pad pages to odd")
     copy_command.add_argument('-w', '--preview', action="store_true",
                               help="open the created file in the default program")
     copy_command.set_defaults(func=commands.copy)

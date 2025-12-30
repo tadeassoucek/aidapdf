@@ -175,6 +175,19 @@ def copy(args: argparse.Namespace) -> bool:
                 for idx in bs:
                     out.insert_blank_page(idx)
 
+            page_count = file.get_page_count()
+            if args.pad_to:
+                if args.pad_to <= page_count:
+                    _logger.warn(f"file has {util.pluralize(page_count, 'page')}, which is <= --pad-to {args.pad_to}")
+                else:
+                    for i in range(args.pad_to - page_count):
+                        out.add_blank_page()
+            else:
+                if args.pad_to_odd and page_count % 2 == 0:
+                    out.add_blank_page()
+                elif args.pad_to_even and page_count % 2 == 1:
+                    out.add_blank_page()
+
             if args.copy_metadata:
                 out.copy_metadata_from_owner()
             if (args.copy_password and file.password) or args.owner_password:
