@@ -14,6 +14,7 @@ from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
 
+
 _logger = Logger(__name__)
 
 
@@ -25,10 +26,10 @@ def version(args: argparse.Namespace):
 
 
 def debug_testlog(_: argparse.Namespace) -> None:
-    _logger.debug("message", s="Hello world!", i=10)
-    _logger.info("message", s="Hello world!", i=10)
-    _logger.warn("message", s="Hello world!", i=10)
-    _logger.err("message", s="Hello world!", i=10)
+    _logger.debug("message")
+    _logger.info("message")
+    _logger.warn("message")
+    _logger.err("message")
 
 
 def debug_parse_selector(args: argparse.Namespace):
@@ -80,7 +81,7 @@ def debug_parse_specifier(args: argparse.Namespace):
             break
 
 
-def info(args: argparse.Namespace):
+def info(args: argparse.Namespace) -> bool:
     _logger.debug(f'info {args}')
 
     def print_target(target: str, prefix: str, value: Any):
@@ -93,8 +94,10 @@ def info(args: argparse.Namespace):
         print_target("pages", "Pages", pages)
         print_target("metadata", "Metadata", file.get_metadata(printable=True))
 
+    return True
 
-def extract(args: argparse.Namespace):
+
+def extract(args: argparse.Namespace) -> bool:
     _logger.debug(f"extract {args}")
 
     extract_text = not not args.text_file
@@ -105,7 +108,7 @@ def extract(args: argparse.Namespace):
 
     if not extract_text and not extract_images:
         _logger.warn("nothing to extract specified")
-        return
+        return False
 
     tup = parse_file_specifier(args.file)
     file = PdfFile(*tup)
@@ -127,6 +130,8 @@ def extract(args: argparse.Namespace):
     if extract_text:
         text_file_stream.close()
         _logger.info(f"wrote extracted text to {repr(text_file)}")
+
+    return True
 
 
 def copy(args: argparse.Namespace) -> bool:
@@ -185,7 +190,7 @@ def split(args: argparse.Namespace) -> bool:
 
     (filename, page_spec, password) = parse_file_specifier(args.file)
     fp = Path(filename)
-    template = args.output_file_template or "{dir}{name}-{i}.pdf"
+    template = args.output_file_template
 
     try:
         # input file
@@ -231,7 +236,7 @@ def explode(args: argparse.Namespace) -> bool:
         return False
 
     (filename, page_selector, password) = parse_file_specifier(args.file)
-    template = args.output_file_template or "{dir}{name}-{i:03}.pdf"
+    template = args.output_file_template
 
     try:
         file = PdfFile(filename, args.select or page_selector, args.password or password)

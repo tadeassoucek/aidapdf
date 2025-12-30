@@ -1,4 +1,5 @@
 import argparse
+import sys
 from argparse import BooleanOptionalAction
 
 from aidapdf import commands
@@ -78,8 +79,6 @@ def main():
     copy_command.add_argument("-o", "--output-file", help="the new PDF file. as of now, this is "
                                                           "required, as pypdf can't write to stdout")
     copy_command.add_argument("-s", "--select", nargs="?", help="selected pages")
-
-    # encryption {{{
     copy_command.add_argument('--copy-password', default=True, action=argparse.BooleanOptionalAction,
                               help="if the input file is protected by a password, protect the new file with the same "
                                    "password. if set and there is a password to copy, an owner password must be provided"
@@ -88,8 +87,6 @@ def main():
                               help="password to protect the new file with. supercedes --copy-password option")
     copy_command.add_argument("-P", "--owner-password", nargs="?",
                               help="owner password to protect the new file with")
-    # }}}
-
     copy_command.add_argument('--copy-metadata', default=True, action=argparse.BooleanOptionalAction,
                               help="copy metadata from the original file to the new one. on by default")
     copy_command.add_argument('--reverse', action="store_true", help="reverse the order of the pages")
@@ -101,7 +98,8 @@ def main():
     split_command = sub.add_parser("split", aliases=["s"])
     split_command.add_argument("file")
     split_command.add_argument('select', nargs="+", help="selected pages")
-    split_command.add_argument("-o", "--output-file-template", nargs="?")
+    split_command.add_argument("-o", "--output-file-template", nargs="?",
+                               default="{dir}{name}-{i:03}.pdf")
     split_command.add_argument("-p", "--password", nargs="?")
     split_command.add_argument("-P", "--owner-password", nargs="?")
     split_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction, default=True)
@@ -112,7 +110,8 @@ def main():
     explode_command.add_argument("file")
     explode_command.add_argument('count', type=int, default=1, nargs="?", help="number of pages per file")
     explode_command.add_argument('-s', '--select', nargs="?", help="page selector")
-    explode_command.add_argument("-o", "--output-file-template", nargs="?")
+    explode_command.add_argument("-o", "--output-file-template", nargs="?",
+                                 default="{dir}{name}-{i:03}.pdf")
     explode_command.add_argument("-p", "--password", nargs="?")
     explode_command.add_argument("-P", "--owner-password", nargs="?")
     explode_command.add_argument('--copy-metadata', action=argparse.BooleanOptionalAction, default=True)
@@ -128,20 +127,16 @@ def main():
 
     args = parser.parse_args()
 
-    if "color" in args:
-        Config.COLOR = args.color
-
-    if "verbose_level" in args and args.verbose_level is not None:
-        Config.VERBOSITY_LEVEL = args.verbose_level
-
-    if args.raw_filenames:
-        Config.RAW_FILENAMES = args.raw_filenames
+    Config.COLOR = args.color
+    Config.VERBOSITY_LEVEL = args.verbose_level
+    Config.RAW_FILENAMES = args.raw_filenames
 
     if "func" in args:
-        args.func(args)
+        if not args.func(args):
+            sys.exit(1)
     else:
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

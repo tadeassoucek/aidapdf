@@ -36,21 +36,20 @@ class Logger:
         self.parent = parent
         self._name = (self.parent.name + ':' if self.parent else "") + self.name
 
-    def _log(self, message: str, level: int, **kwargs) -> None:
+    def _log(self, message: str, level: int) -> None:
         if level <= Config.VERBOSITY_LEVEL:
             prefix = f"{Logger.LEVELS[level]}:{self._name}"
-            suffix = ' ' + pprint.pformat(kwargs) if kwargs else ""
             print(Logger._color(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +
-                  Logger._color(message + suffix, fg='white'), file=sys.stderr)
+                  Logger._color(message, fg='white'), file=sys.stderr)
 
-    def debug(self, message: str, **kwargs) -> None:
-        self._log(message, 3, **kwargs)
+    def debug(self, message: str) -> None:
+        self._log(message, 3)
 
-    def info(self, message: str, **kwargs) -> None:
-        self._log(message, 2, **kwargs)
+    def info(self, message: str) -> None:
+        self._log(message, 2)
 
-    def warn(self, message: str, **kwargs) -> None:
-        self._log(message, 1, **kwargs)
+    def warn(self, message: str) -> None:
+        self._log(message, 1)
 
-    def err(self, message: str, **kwargs) -> None:
-        self._log(message, 0, **kwargs)
+    def err(self, message: str) -> None:
+        self._log(message, 0)
