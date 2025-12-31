@@ -2,11 +2,10 @@ import sys
 from contextlib import contextmanager
 from os import PathLike, path
 from pathlib import Path
-from typing import Iterator, Generator, Tuple, Any, Optional, Literal
+from typing import Iterator, Generator, Any, Optional, Literal
 
 import pypdf
 from pypdf import PdfReader, PageObject, PdfWriter
-from pypdf.constants import UserAccessPermissions
 from pypdf.generic import IndirectObject
 
 from aidapdf.config import Config
@@ -27,11 +26,11 @@ class InternalFileException(Exception):
 
 def check_filename(fp: str) -> str:
     if not Path(fp).is_file():
-        raise FileNotFoundError(f"file {fp} not found")
+        raise FileNotFoundError(f"file {repr(fp)} not found")
     return fp
 
 
-def parse_file_specifier(fsp: str) -> Tuple[str, Optional[str], Optional[str]]:
+def parse_file_specifier(fsp: str) -> tuple[str, Optional[str], Optional[str]]:
     if Config.RAW_FILENAMES:
         return check_filename(fsp), None, None
 
@@ -40,7 +39,7 @@ def parse_file_specifier(fsp: str) -> Tuple[str, Optional[str], Optional[str]]:
     # on windows, "C:\Users\...\Downloads\file.pdf" could be interpreted as a file name "C" with "\Users\..." being
     # interpreted as the page selector. to prevent this, we check if such a file exists in the CWD and if not,
     # we assume the "[a-zA-Z]:" prefix is actually part of the path
-    if Config.WINDOWS and len(toks[0]) == 1 and len(toks) > 1:
+    if Config.PLATFORM == "Windows" and len(toks[0]) == 1 and len(toks) > 1:
         drive = toks[0]
         # just in case: what if the user is referring to a file named "C" in the CWD?
         if not path.exists(drive):

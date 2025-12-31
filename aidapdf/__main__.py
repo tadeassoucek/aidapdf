@@ -18,6 +18,9 @@ def main():
     parser.add_argument('-r', '--raw-filenames', default=False, action=BooleanOptionalAction,
                         help="treat filenames as raw, not as file specifiers")
 
+    parser.add_argument('--platform', nargs='?', choices=["macos", "windows", "other", "auto"],
+                        default="auto", help="platform override")
+
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument('-v', '--verbose', dest="verbose_level", action='store_const', const=3,
                         help="print debug information")
@@ -138,10 +141,8 @@ def main():
 
     args = parser.parse_args()
 
-    Config.COLOR = args.color
-    Config.RAW_FILENAMES = args.raw_filenames
-    if "verbose_level" in args and args.verbose_level is not None:
-        Config.VERBOSITY_LEVEL = args.verbose_level
+    Config.load_from_args(args)
+    _logger.debug("config loaded: " + Config.to_str())
 
     if "func" in args:
         if not args.func(args):

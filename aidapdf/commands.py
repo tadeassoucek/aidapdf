@@ -199,7 +199,7 @@ def edit(args: argparse.Namespace) -> bool:
                          '(' + util.pluralize(page_count, 'page') + ')')
 
         if args.preview:
-            util.open_file(out.path)
+            util.open_file_with_default_program(out.path)
     except WrongPasswordError as e:
         _logger.err(f"{repr(filename)}: {e.args[0]} (password provided: {repr(password)})")
         return False
