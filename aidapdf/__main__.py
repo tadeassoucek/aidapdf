@@ -116,7 +116,7 @@ def main():
     split_command.add_argument('--copy-password', action=argparse.BooleanOptionalAction, default=True)
     split_command.set_defaults(func=commands.split)
 
-    explode_command = sub.add_parser("explode", help="divides the PDF file into files of N pages each")
+    explode_command = sub.add_parser("explode", help="divide the PDF file into files of N pages each")
     explode_command.add_argument("file")
     explode_command.add_argument('count', type=int, default=1, nargs="?", help="number of pages per file")
     explode_command.add_argument('-s', '--select', nargs="?", help="page selector")
@@ -128,7 +128,7 @@ def main():
     explode_command.add_argument('--copy-password', action=argparse.BooleanOptionalAction, default=True)
     explode_command.set_defaults(func=commands.explode)
 
-    merge_command = sub.add_parser("merge", aliases=["m"], help="meges multiple PDF files")
+    merge_command = sub.add_parser("merge", aliases=["m"], help="merge multiple PDF files into a single file")
     merge_command.add_argument("file", nargs="+")
     merge_command.add_argument("-o", "--output-file")
     merge_command.add_argument("-p", "--password", nargs="?")

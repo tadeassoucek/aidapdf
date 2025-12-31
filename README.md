@@ -14,8 +14,8 @@ positional arguments:
     info (i)            print info about the PDF file
     extract (x)         extract text, attachments and graphics from PDF file
     edit (e)            edit the PDF file
-    explode             divides the PDF file into files of N pages each
-    merge (m)           meges multiple PDF files
+    explode             divide the PDF file into files of N pages each
+    merge (m)           merge multiple PDF files into a single file
 
 options:
   -h, --help            show this help message and exit
@@ -25,6 +25,7 @@ options:
   -v, --verbose         print debug information
   -q, --quiet           suppress logging messages except for warnings and errors
   -Q, --very-quiet      suppress logging messages except for errors
+
 ```
 
 ## Commands
