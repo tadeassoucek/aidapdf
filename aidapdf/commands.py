@@ -93,6 +93,7 @@ def info(args: argparse.Namespace) -> bool:
         pages = file.get_page_count()
         print_target("pages", "Pages", pages)
         print_target("metadata", "Metadata", file.get_metadata(resolve=True))
+        print_target("permissions", "Permissions", file.get_permissions())
 
     return True
 

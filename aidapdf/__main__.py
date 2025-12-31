@@ -55,12 +55,13 @@ def main():
     info_command.add_argument("file", help="the PDF file")
     group = info_command.add_mutually_exclusive_group(required=False)
     group.add_argument("-a", "--all", dest="targets", action="store_const",
-                       const=["pages", "metadata"], default=["pages", "metadata"],
+                       const=["pages", "metadata"], default=["pages", "metadata", "permissions"],
                        help="show all info")
     group.add_argument("-p", "--pages", dest="targets", action="store_const", const=["pages"],
                        help="print the number of pages")
     group.add_argument("-m", "--metadata", dest="targets", action="store_const", const=["metadata"],
                        help="print the metadata")
+    group.add_argument("-P", "--permissions", dest="targets", action="store_const", const=["permissions"],)
     info_command.set_defaults(func=commands.info)
 
     extract_command = sub.add_parser('extract', aliases=['x'],
