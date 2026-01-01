@@ -4,7 +4,8 @@ A CLI PDF file editor. Basically just an interface for the [`pypdf`](https://pyp
 powerful than the other ones.
 
 ```
-usage: aidapdf [-h] [--color | --no-color] [-r | --raw-filenames | --no-raw-filenames] [-v | -q | -Q]
+usage: aidapdf [-h] [--color | --no-color] [-r | --raw-filenames | --no-raw-filenames]
+               [--platform [{macos,windows,other,auto}]] [-v | -q | -Q]
                {debug,dbg,version,v,info,i,extract,x,edit,e,split,s,explode,merge,m} ...
 
 positional arguments:
@@ -22,10 +23,11 @@ options:
   --color, --no-color   enable color output
   -r, --raw-filenames, --no-raw-filenames
                         treat filenames as raw, not as file specifiers
+  --platform [{macos,windows,other,auto}]
+                        platform override
   -v, --verbose         print debug information
   -q, --quiet           suppress logging messages except for warnings and errors
   -Q, --very-quiet      suppress logging messages except for errors
-
 ```
 
 ## Commands
