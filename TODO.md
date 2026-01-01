@@ -18,3 +18,4 @@
 - [ ] Add unit tests.
 - [x] Improve `info` command.
 - [x] Handle `KeyboardInterrupt`s properly.
+- [x] Make `PageSelector`s error out on OOB.

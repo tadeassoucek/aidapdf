@@ -15,6 +15,10 @@ class PageSelectorParserException(Exception):
     pass
 
 
+class PageSelectorBakeException(Exception):
+    pass
+
+
 class PageSelectorToken(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def bake(self, file: 'PdfFile') -> list[int]:
@@ -30,7 +34,12 @@ class PageSelectorNumberToken(PageSelectorToken):
         self.number = number
 
     def bake(self, file: 'PdfFile') -> list[int]:
-        n = self.number - 1 if self.number >= 0 else file.get_page_count() + self.number
+        page_count = file.get_page_count()
+        if self.number == 0:
+            raise PageSelectorBakeException(f"number {self} can't be 0")
+        if abs(self.number) > page_count:
+            raise PageSelectorBakeException(f"number {self} exceeds page count {page_count}")
+        n = self.number - 1 if self.number >= 0 else page_count + self.number
         return [n]
 
     def __str__(self):
@@ -58,9 +67,10 @@ class PageSelectorCondition:
 
     def __repr__(self) -> str:
         return (
-                '{' +
-                {PageSelectorCondition.IS_ODD: "odd", PageSelectorCondition.IS_EVEN: "even"}[self.call] +
-                '}'
+                '{' + {
+                    PageSelectorCondition.IS_ODD: "odd",
+                    PageSelectorCondition.IS_EVEN: "even"
+                }[self.call] + '}'
         )
 
 
@@ -73,15 +83,30 @@ class PageSelectorRangeToken(PageSelectorToken):
         self.condition: PageSelectorCondition | None = None
 
     def bake(self, file: 'PdfFile'):
-        start = self.start - 1 if self.start >= 0 else file.get_page_count() + self.start
-        end = self.end - 1 if self.end >= 0 else file.get_page_count() + self.end
+        page_count = file.get_page_count()
+        if self.start == 0:
+            raise PageSelectorBakeException(f"start {self} can't be 0")
+        if self.end == 0:
+            raise PageSelectorBakeException(f"end {self} can't be 0")
+        # too large / too small
+        if abs(self.start) > page_count:
+            raise PageSelectorBakeException(f"start of range {self} exceeds page count {page_count}")
+        if abs(self.end) > page_count:
+            raise PageSelectorBakeException(f"end of range {self} exceeds page count {page_count}")
+        start = self.start - 1 if self.start >= 0 else page_count + self.start
+        end = self.end - 1 if self.end >= 0 else page_count + self.end
+
+        # handle condition
         if self.condition:
+            # is odd condition
             if self.condition.call == PageSelectorCondition.IS_ODD:
                 if (start+1) % 2 == 0: start += 1
                 return list(range(start, end+1, 2))
+            # is even condition
             elif self.condition.call == PageSelectorCondition.IS_EVEN:
                 if (start+1) % 2 == 1: start += 1
                 return list(range(start, end+1, 2))
+            # another condition
             else:
                 return list(filter(self.condition.__call__, range(start, end+1)))
         else:

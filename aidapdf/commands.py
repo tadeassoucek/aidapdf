@@ -13,7 +13,7 @@ from aidapdf import util
 from aidapdf.config import Config
 from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
-from aidapdf.pageselector import PageSelector
+from aidapdf.pageselector import PageSelector, PageSelectorBakeException
 
 _logger = Logger(__name__)
 
@@ -68,8 +68,11 @@ def debug_selector(args: argparse.Namespace):
             else:
                 select = bake_file.selector
             print(select)
-            if bake_file:
-                pprint(list(map(lambda x: x+1, select.bake(bake_file))))
+            try:
+                if bake_file:
+                    pprint(list(map(lambda x: x+1, select.bake(bake_file))))
+            except PageSelectorBakeException as e:
+                _logger.err("can't bake: " + e.args[0])
 
             if args.select:
                 break
@@ -78,19 +81,17 @@ def debug_selector(args: argparse.Namespace):
 
 
 @command
-def debug_parse_specifier(args: argparse.Namespace):
+def debug_specifier(args: argparse.Namespace):
     while True:
         if args.spec:
             spec = args.spec
         else:
-            try:
-                spec = input('> ')
-            except (EOFError, KeyboardInterrupt):
-                print()
-                break
+            spec = input('> ')
 
-        path, selector, password = parse_file_specifier(spec)
+        path, selector, password = parse_file_specifier(spec, skip_check=True)
         print(f"path = {repr(path)}, selector = {repr(selector)}, password = {repr(password)}")
+        if not Path(path).is_file():
+            _logger.warn(f"file {repr(path)} doesn't exist")
 
         if args.spec:
             break

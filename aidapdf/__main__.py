@@ -47,7 +47,7 @@ def main():
     parse_specifier_command = debug_sub.add_parser("specifier", aliases=['spec'],
                                                    help="parse and show file specifier")
     parse_specifier_command.add_argument("spec", nargs='?', help="file specifier")
-    parse_specifier_command.set_defaults(func=commands.debug_parse_specifier)
+    parse_specifier_command.set_defaults(func=commands.debug_specifier)
 
     version_command = sub.add_parser('version', aliases=['v'], help="print version information and exit")
     version_command.add_argument('-t', '--terse', action='store_true',

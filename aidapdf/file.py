@@ -32,9 +32,9 @@ def check_filename(fp: str) -> str:
     return fp
 
 
-def parse_file_specifier(fsp: str) -> tuple[str, Optional[str], Optional[str]]:
+def parse_file_specifier(fsp: str, skip_check = False) -> tuple[str, Optional[str], Optional[str]]:
     if Config.RAW_FILENAMES:
-        return check_filename(fsp), None, None
+        return fsp if skip_check else check_filename(fsp), None, None
 
     toks = fsp.split(':')
 
@@ -48,7 +48,7 @@ def parse_file_specifier(fsp: str) -> tuple[str, Optional[str], Optional[str]]:
             toks = toks[1:]
             toks[0] = drive + ':' + toks[0]
 
-    filename: str | None = toks[0]
+    filepath: str | None = toks[0]
     selector: str | None = None
     password: str | None = None
     if len(toks) >= 2:
@@ -56,10 +56,10 @@ def parse_file_specifier(fsp: str) -> tuple[str, Optional[str], Optional[str]]:
     if len(toks) >= 3:
         password = toks[2] or None
 
-    _logger.debug(f'file specifier parsed as {repr(filename)}; selector={repr(selector)}; '
+    _logger.debug(f'file specifier parsed as {repr(filepath)}; selector={repr(selector)}; '
                   f'password={repr_password(password)}')
 
-    return check_filename(filename), selector, password
+    return filepath if skip_check else check_filename(filepath), selector, password
 
 
 class PdfFile:
