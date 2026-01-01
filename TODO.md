@@ -16,4 +16,4 @@
 - [ ] Add an OCR option.
 - [ ] Add unit tests.
 - [x] Improve `info` command.
-- [ ] Handle `KeyboardInterrupt`s properly.
+- [x] Handle `KeyboardInterrupt`s properly.

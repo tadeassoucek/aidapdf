@@ -103,11 +103,8 @@ class PdfFile:
             if res == pypdf.PasswordType.NOT_DECRYPTED:
                 # password is incorrect
                 self._logger.err("incorrect password")
-                try:
-                    # read password
-                    self.password = getpass(f"Password to read file {repr(str(self.path))}: ")
-                except (EOFError, KeyboardInterrupt):
-                    sys.exit(1)
+                # read password
+                self.password = getpass(f"Password to read file {repr(str(self.path))}: ")
             else:
                 # decrypted successfully
                 encrypted = False
@@ -115,34 +112,6 @@ class PdfFile:
         self._reader_open = True
         self._derive_basic_metadata()
         self._logger.debug("reader opened")
-
-    @staticmethod
-    def _parse_datetime(key: str, raw: str) -> Optional[datetime]:
-        if not raw: return None
-        raw = raw.strip()
-        timezone_stripped = False
-        # strip timezone
-        if raw.endswith("Z00'00'"):
-            raw = raw[:-7]
-            timezone_stripped = True
-        try:
-            return datetime.strptime(raw, "D:%Y%m%d%H%M%S" + ('%z' if not timezone_stripped else ''))
-        except ValueError:
-            _logger.warn(f"'{key}' is not a valid date: {repr(raw)}")
-
-    def _derive_basic_metadata(self) -> None:
-        self._ensure_reader_open()
-        metadata = self.get_metadata(resolve=True)
-        self.title = metadata.get('/Title', None)
-        self.author = metadata.get('/Author', None)
-        self.subject = metadata.get('/Subject', None)
-        self.keywords = metadata.get('/Keywords', None)
-        self.creator = metadata.get('/Creator', None)
-        self.producer = metadata.get('/Producer', None)
-        creation_date = metadata.get('/CreationDate', None)
-        self.creation_date = self._parse_datetime('/CreationDate', creation_date)
-        modified_date = metadata.get('/ModDate', None)
-        self.modified_date = self._parse_datetime('/ModDate', modified_date)
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
@@ -213,9 +182,10 @@ class PdfFile:
             raise InternalFileException("writer not open")
 
     def close_reader(self) -> None:
-        """Closes and disposes of the reader. Raises a `ValueError if no reader is open."""
+        """Closes and disposes of the reader if one is open."""
 
-        self._ensure_reader_open()
+        if not self._reader_open:
+            return
         self._reader.close()
         self._reader = None
         self._reader_open = False
@@ -223,14 +193,43 @@ class PdfFile:
         self._reader = None
 
     def close_writer(self) -> None:
-        """Closes and disposes of the writer. Raises a `ValueError` if no writer is open."""
+        """Closes and disposes of the writer if one is open."""
 
-        self._ensure_writer_open()
+        if not self._writer_open:
+            return
         self._writer.write(self.path)
         self._writer_open = False
         self._writer.close()
         self._logger.debug("writer closed")
         self._writer = None
+
+    @staticmethod
+    def _parse_datetime(key: str, raw: str) -> Optional[datetime]:
+        if not raw: return None
+        raw = raw.strip()
+        timezone_stripped = False
+        # strip timezone
+        if raw.endswith("Z00'00'"):
+            raw = raw[:-7]
+            timezone_stripped = True
+        try:
+            return datetime.strptime(raw, "D:%Y%m%d%H%M%S" + ('%z' if not timezone_stripped else ''))
+        except ValueError:
+            _logger.warn(f"'{key}' is not a valid date: {repr(raw)}")
+
+    def _derive_basic_metadata(self) -> None:
+        self._ensure_reader_open()
+        metadata = self.get_metadata(resolve=True)
+        self.title = metadata.get('/Title', None)
+        self.author = metadata.get('/Author', None)
+        self.subject = metadata.get('/Subject', None)
+        self.keywords = metadata.get('/Keywords', None)
+        self.creator = metadata.get('/Creator', None)
+        self.producer = metadata.get('/Producer', None)
+        creation_date = metadata.get('/CreationDate', None)
+        self.creation_date = self._parse_datetime('/CreationDate', creation_date)
+        modified_date = metadata.get('/ModDate', None)
+        self.modified_date = self._parse_datetime('/ModDate', modified_date)
 
     def copy_metadata_from_owner(self) -> None:
         """Copies metadata from the owner file. The writer has to be opened."""

@@ -147,7 +147,11 @@ def main():
     _logger.debug("config loaded: " + Config.to_str())
 
     if "func" in args:
-        if not args.func(args):
+        try:
+            if not args.func(args):
+                sys.exit(1)
+        except (KeyboardInterrupt, EOFError):
+            print()
             sys.exit(1)
     else:
         parser.print_help()
