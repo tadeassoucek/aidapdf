@@ -1,6 +1,6 @@
 import string
 import abc
-from typing import Iterator, TYPE_CHECKING
+from typing import Iterator, TYPE_CHECKING, Literal
 
 from aidapdf.log import Logger
 
@@ -41,7 +41,8 @@ class PageSelectorCondition:
     IS_EVEN = 0
     IS_ODD = 1
 
-    def __init__(self, call: IS_EVEN | IS_ODD):
+    def __init__(self, call: int):
+        assert call in (self.IS_EVEN, self.IS_ODD)
         self.call = call
 
     def __call__(self, *args, **kwargs) -> bool:

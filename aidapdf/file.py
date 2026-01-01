@@ -22,8 +22,8 @@ _logger = Logger(__name__)
 
 
 class InternalFileException(Exception):
-    def __init__(self, message: str):
-        super().__init__(message)
+    def __init__(self, message: str, **kwargs):
+        super().__init__(message, kwargs)
 
 
 def check_filename(fp: str) -> str:
@@ -175,11 +175,13 @@ class PdfFile:
 
     def _ensure_reader_open(self) -> None:
         if self._reader is None or not self._reader_open:
-            raise InternalFileException("reader not open")
+            raise InternalFileException("reader not open",
+                                        _reader=self._reader, _reader_open=self._reader_open)
 
     def _ensure_writer_open(self) -> None:
         if self._writer is None or not self._writer_open:
-            raise InternalFileException("writer not open")
+            raise InternalFileException("writer not open",
+                                        _writer=self._writer, _writer_open=self._writer_open)
 
     def close_reader(self) -> None:
         """Closes and disposes of the reader if one is open."""
@@ -334,7 +336,7 @@ class PdfFile:
 
     def get_page_count(self) -> int:
         """
-        Return number of pages in the file. Presupposes that the reader is opened.
+        Return number of pages in the file. Presupposes that the reader is open.
         """
 
         self._ensure_reader_open()
@@ -342,7 +344,7 @@ class PdfFile:
 
     def get_pages(self, selector: Optional[PageSelector] = None) -> Iterator[PageObject]:
         """
-        Iterates over selected pages. Presupposes that the reader is opened.
+        Iterates over selected pages. Presupposes that the reader is open.
         :param selector: Selector override.
         """
 

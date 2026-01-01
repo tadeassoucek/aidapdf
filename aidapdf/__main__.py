@@ -42,7 +42,7 @@ def main():
     parse_selector_command.add_argument("select", nargs='?', help="page selector. if none is specified, "
                                                          "enters interactive mode")
     parse_selector_command.add_argument("-f", "--file", nargs='?', help="file to use as a bake file")
-    parse_selector_command.set_defaults(func=commands.debug_parse_selector)
+    parse_selector_command.set_defaults(func=commands.debug_selector)
 
     parse_specifier_command = debug_sub.add_parser("specifier", aliases=['spec'],
                                                    help="parse and show file specifier")

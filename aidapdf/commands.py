@@ -49,35 +49,32 @@ def debug_testlog(_) -> None:
 
 
 @command
-def debug_parse_selector(args: argparse.Namespace):
+def debug_selector(args: argparse.Namespace):
     bake_file: PdfFile | None = None
     if args.file:
-        (filename, _, password) = parse_file_specifier(args.file)
-        bake_file = PdfFile(filename, None, password)
+        (filename, selector, password) = parse_file_specifier(args.file)
+        bake_file = PdfFile(filename, selector, password)
         bake_file.get_reader_unsafe()
 
-    while True:
-        raw_select = ""
+    try:
+        while True:
+            if not bake_file.selector:
+                if args.select:
+                    raw_select = args.select
+                else:
+                    raw_select = input((bake_file.path.name if bake_file else '') + '> ')
 
-        if args.select:
-            raw_select = args.select
-        else:
-            try:
-                raw_select = input((bake_file.path.name if bake_file else '') + '> ')
-            except (EOFError, KeyboardInterrupt):
-                print()
+                select = PageSelector.parse(raw_select)
+            else:
+                select = bake_file.selector
+            print(select)
+            if bake_file:
+                pprint(list(map(lambda x: x+1, select.bake(bake_file))))
+
+            if args.select:
                 break
-            finally:
-                if bake_file:
-                    bake_file.close_reader()
-
-        select = PageSelector.parse(raw_select)
-        print(select)
-        if bake_file:
-            pprint(list(map(lambda x: x+1, select.bake(bake_file))))
-
-        if args.select:
-            break
+    finally:
+        bake_file.close_reader()
 
 
 @command
