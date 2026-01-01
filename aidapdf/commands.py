@@ -10,6 +10,7 @@ from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 import aidapdf
 import readline
 from aidapdf import util
+from aidapdf.config import Config
 from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
@@ -128,15 +129,23 @@ def info(args: argparse.Namespace) -> bool:
 
 @command
 def extract(args: argparse.Namespace) -> bool:
-    extract_text = not not args.text_file
-    text_file: str = "stdout" if args.text_file == '-' else args.text_file
-    text_file_stream = None if not extract_text else sys.stdout if text_file == "stdout" else open(args.output_file, mode='w+')
-    extract_images = not not args.image_file_template
-    image_file_template: str = args.image_file_template
+    extract_text = args.text or not not args.text_file
+    text_file: str = args.text_file or "stdout"
+    if extract_text:
+        text_file_stream = sys.stdout if text_file == "stdout" else open(text_file, mode='w+')
+    else:
+        text_file_stream = None
+    extract_images = args.images or not not args.image_file_template
+    image_file_template: str = args.image_file_template or "{dir}{name}-{p:03}-{i:03}-{img}"
 
-    if not extract_text and not extract_images:
-        _logger.warn("nothing to extract specified")
-        return False
+    if Config.DEBUG_SHOWN:
+        if not extract_text and not extract_images:
+            _logger.err("nothing to extract specified")
+            return False
+        extracting = []
+        if extract_text: extracting.append("text")
+        if extract_images: extracting.append("images")
+        _logger.debug("extracting " + ', '.join(extracting))
 
     try:
         filename, page_spec, password = parse_file_specifier(args.file)
@@ -145,7 +154,7 @@ def extract(args: argparse.Namespace) -> bool:
         return False
 
     try:
-        file = PdfFile(filename, page_spec, password)
+        file = PdfFile(filename, page_spec, args.decrypt_password or password)
         with file.get_reader():
             text = ""
             for page in file.get_pages():
@@ -158,7 +167,7 @@ def extract(args: argparse.Namespace) -> bool:
                         fp = image_file_template.format(dir=str(file.path.parent) + os.sep, name=file.path.stem, p=page.page_number+1,
                                                         i=i+1, img=image_object.name, ext=ext)
                         image_object.image.save(fp)
-                        _logger.info(f"wrote image on page {page.page_number+1} to file {repr(fp)}")
+                        _logger.info(f"wrote image {i+1} on page {page.page_number+1} to file {repr(fp)}")
             if extract_text:
                 print(text, file=text_file_stream)
         if extract_text:

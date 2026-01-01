@@ -12,6 +12,8 @@ class Config:
     COLOR_VALUE = 'cyan'
 
     VERBOSITY_LEVEL = 2
+    DEBUG_SHOWN = False
+
     RAW_FILENAMES = False
     PLATFORM: Optional[Literal["macOS", "Windows"]] = None
 
@@ -38,6 +40,8 @@ class Config:
 
         if "verbosity_level" in args and args.verbosity_level is not None:
             Config.VERBOSITY_LEVEL = args.verbosity_level
+            if Config.VERBOSITY_LEVEL >= 3:
+                Config.DEBUG_SHOWN = True
 
     @staticmethod
     def to_str() -> str:

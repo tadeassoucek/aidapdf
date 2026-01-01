@@ -74,10 +74,15 @@ def main():
     extract_command = sub.add_parser('extract', aliases=['x'],
                                      help="extract text, attachments and graphics from PDF file")
     extract_command.add_argument('file', help='the PDF file')
-    extract_command.add_argument('-t', '--text-file', nargs="?", default='-',
+    extract_command.add_argument('--decrypt-password', '--dpass', nargs='?',
+                                 help="password used to decrypt the input file. overrides the 'password' part of the "
+                                      "input file specifier. ignored if the input file is not encrypted.")
+    extract_command.add_argument('-t', '--text', action='store_true', help="extract text")
+    extract_command.add_argument('--text-file', default=None, type=str, nargs="?",
                                  help="text file to write the extracted text to")
-    extract_command.add_argument('-i', '--image-file-template', default="{dir}{name}-{p:03}-{i:03}-{img}",
-                                 nargs='?', help="template for the extracted image files")
+    extract_command.add_argument('-i', '--images', action='store_true', help="extract images")
+    extract_command.add_argument('--image-file-template', default=None, type=str, nargs='?',
+                                 help="template for the extracted image files")
     extract_command.add_argument('-m', '--extract-mode', nargs='?', default='plain',
                                  choices=['plain', 'layout'],
                                  help="extraction mode. options are 'plain' (strip formatting) and 'layout' (preserve "

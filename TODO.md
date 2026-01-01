@@ -12,6 +12,7 @@
 - [ ] Add a `--metadata` option.
 - [ ] Add a way to deal with file permissions.
 - [x] Rework decryption/encryption options.
+- [ ] Implement decryption/encryption options for the other commands.
 - [ ] Add checks for file creation errors.
 - [ ] Add an OCR option.
 - [ ] Add unit tests.
