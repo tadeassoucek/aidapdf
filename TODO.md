@@ -11,6 +11,7 @@
 - [x] Rename `copy` command to `edit`.
 - [ ] Add a `--metadata` option.
 - [ ] Add a way to deal with file permissions.
+- [ ] Rework decryption/encryption options.
 - [ ] Add checks for file creation errors.
 - [ ] Add an OCR option.
 - [ ] Add unit tests.

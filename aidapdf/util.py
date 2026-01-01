@@ -1,12 +1,18 @@
 import subprocess
 import os
-from typing import Optional
+from typing import Optional, Any
 
 from aidapdf.config import Config
 
 
-def repr_password(passwd: Optional[str]) -> str:
-    return repr('*' * 8) if passwd else 'None'
+def str_password(passwd: Any) -> Any:
+    if type(passwd) is str:
+        return '*' * 8 if passwd else None
+    return passwd
+
+
+def repr_password(passwd: Any) -> str:
+    return repr(str_password(passwd)) if passwd else 'None'
 
 
 def open_file_with_default_program(filepath: str | os.PathLike):

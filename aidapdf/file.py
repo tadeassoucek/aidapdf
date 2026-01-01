@@ -1,6 +1,6 @@
 import sys
 from contextlib import contextmanager
-from os import PathLike, path
+from os import path, PathLike
 from pathlib import Path
 from typing import Iterator, Generator, Any, Optional, Literal
 
@@ -64,10 +64,10 @@ class PdfFile:
     def __init__(self, filename: str | PathLike,
                  selector: Optional[str | PageSelector] = None,
                  password: Optional[str] = None,
-                 owner: Optional['PdfFile'] = None):
+                 source_file: Optional['PdfFile'] = None):
         self.path = Path(filename)
         self.selector: Optional[PageSelector] = PageSelector.parse(selector) if type(selector) is str else selector or None
-        self.owner = owner
+        self.source_file = source_file
         self.password = password
 
         self._reader: Optional[PdfReader] = None
@@ -192,15 +192,15 @@ class PdfFile:
     def copy_metadata_from_owner(self) -> None:
         """Copies metadata from the owner file. The writer has to be opened."""
         self._ensure_writer_open()
-        metadata = self.owner.get_metadata()
+        metadata = self.source_file.get_metadata()
         self._writer.add_metadata(metadata)
-        self._logger.debug(f"copied metadata from {self.owner}: {metadata}")
+        self._logger.info(f"copied metadata from {self.source_file}: {metadata}")
 
     def add_metadata(self, metadata: dict[str, Any]) -> None:
         """Add metadata. The writer has to be open."""
         self._ensure_writer_open()
         self._writer.add_metadata(metadata)
-        self._logger.debug(f"added metadata {metadata}")
+        self._logger.info(f"added metadata {metadata}")
 
     def add_blank_page(self) -> None:
         """Add a blank page to the end of the file. The writer has to be opened."""
@@ -270,7 +270,7 @@ class PdfFile:
         """
 
         self._ensure_writer_open()
-        password = password or (self.owner and self.owner.password)
+        password = password or (self.source_file and self.source_file.password)
         # prompt for owner password if not provided
         if not owner_password:
             try:
@@ -278,12 +278,13 @@ class PdfFile:
             except (EOFError, KeyboardInterrupt):
                 self._logger.err("no owner password provided")
                 sys.exit(1)
-        self._writer.encrypt(password or self.owner.password, owner_password)
-        if self.owner.password:
-            self._logger.debug(f"encrypted with password taken from {self.owner} and provided owner_password "
+
+        self._writer.encrypt(password, owner_password)
+        if password == self.source_file.password:
+            self._logger.info(f"encrypted with password taken from {self.source_file} and provided owner_password "
                                f"({repr_password(owner_password)})")
         else:
-            self._logger.debug("encrypted with the provided passwords")
+            self._logger.info("encrypted with the provided passwords")
 
     def get_page_count(self) -> int:
         """

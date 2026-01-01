@@ -22,11 +22,11 @@ def main():
                         default="auto", help="platform override")
 
     verbosity_group = parser.add_mutually_exclusive_group()
-    verbosity_group.add_argument('-v', '--verbose', dest="verbose_level", action='store_const', const=3,
+    verbosity_group.add_argument('-v', '--verbose', dest="verbosity_level", action='store_const', const=3,
                         help="print debug information")
-    verbosity_group.add_argument('-q', '--quiet', dest="verbose_level", action='store_const', const=1,
+    verbosity_group.add_argument('-q', '--quiet', dest="verbosity_level", action='store_const', const=1,
                         help="suppress logging messages except for warnings and errors")
-    verbosity_group.add_argument('-Q', '--very-quiet', dest="verbose_level", action='store_const', const=0,
+    verbosity_group.add_argument('-Q', '--very-quiet', dest="verbosity_level", action='store_const', const=0,
                                  help="suppress logging messages except for errors")
 
     sub = parser.add_subparsers()
@@ -86,15 +86,13 @@ def main():
     edit_command.add_argument("-o", "--output-file", nargs='?', default='-',
                               help="don't rewrite the input file and write the new PDF file here")
     edit_command.add_argument("-s", "--select", nargs="?", help="selected pages")
-    edit_command.add_argument('--copy-password', default=True, action=argparse.BooleanOptionalAction,
-                              help="if the input file is protected by a password, protect the new file with the same "
-                                   "password. if set and there is a password to copy, an owner password must be provided "
-                                   "with the --owner-password option. on by default")
-    edit_command.add_argument("-p", "--password", nargs="?",
-                              help="password to decrypt the input file with. if --copy-password is set, the output file "
-                                   "is encrypted using this password")
-    edit_command.add_argument("-P", "--owner-password", nargs="?",
-                              help="owner password to protect the new file with")
+    # decryption/encryption commands
+    edit_command.add_argument('--decrypt-password', '--dpass', nargs='?',
+                              help="password used to decrypt the input file. overrides the 'password' part of the "
+                                   "input file specifier. ignored if the input file is not encrypted.")
+    edit_command.add_argument("--encrypt", action="store_true")
+    edit_command.add_argument("--encrypt-password", "--epass", nargs='?')
+    edit_command.add_argument("--encrypt-owner-password", "--eownpass", nargs='?')
     edit_command.add_argument('--copy-metadata', default=True, action=argparse.BooleanOptionalAction,
                               help="copy metadata from the original file to the new one. on by default")
     edit_command.add_argument('--reverse', action="store_true", help="reverse the order of the pages")

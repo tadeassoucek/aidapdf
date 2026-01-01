@@ -14,12 +14,11 @@ class Config:
         if args.platform != "auto":
             assert args.platform in ("macos", "windows", "other")
 
-            if args.platform == "macos":
-                Config.PLATFORM = "macOS"
-            elif args.platform == "windows":
-                Config.PLATFORM = "Windows"
-            elif args.platform == "other":
-                Config.PLATFORM = None
+            Config.Platform = {
+                'macos': 'macOS',
+                'windows': 'Windows',
+                'other': None,
+            }[args.platform]
         else:
             if platform.system() == 'Darwin':
                 Config.PLATFORM = "macOS"
@@ -31,8 +30,8 @@ class Config:
         Config.COLOR = args.color
         Config.RAW_FILENAMES = args.raw_filenames
 
-        if "verbose_level" in args and args.verbose_level is not None:
-            Config.VERBOSITY_LEVEL = args.verbose_level
+        if "verbosity_level" in args and args.verbosity_level is not None:
+            Config.VERBOSITY_LEVEL = args.verbosity_level
 
     @staticmethod
     def to_str() -> str:

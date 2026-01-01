@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 from pypdf.errors import FileNotDecryptedError, WrongPasswordError, PdfReadError
 
@@ -14,10 +14,23 @@ from aidapdf.file import PdfFile, parse_file_specifier
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
 
-
 _logger = Logger(__name__)
 
 
+def command(fn: Callable[[argparse.Namespace], bool]) -> Callable[[argparse.Namespace], bool]:
+    def wrap(args: argparse.Namespace):
+        treated_args = {}
+        for k, v in args.__dict__.items():
+            # censor passwords
+            if k.endswith('password'):
+                v = util.str_password(v)
+            treated_args[k] = v
+        _logger.debug(fn.__name__ + ' ' + str(treated_args))
+        return fn(args)
+    return wrap
+
+
+@command
 def version(args: argparse.Namespace):
     if args.terse:
         print(aidapdf.__version__)
@@ -25,6 +38,7 @@ def version(args: argparse.Namespace):
         print(aidapdf.__name__, aidapdf.__version__)
 
 
+@command
 def debug_testlog(_: argparse.Namespace) -> None:
     _logger.debug("message")
     _logger.info("message")
@@ -32,6 +46,7 @@ def debug_testlog(_: argparse.Namespace) -> None:
     _logger.err("message")
 
 
+@command
 def debug_parse_selector(args: argparse.Namespace):
     bake_file: PdfFile | None = None
     if args.file:
@@ -63,6 +78,7 @@ def debug_parse_selector(args: argparse.Namespace):
             break
 
 
+@command
 def debug_parse_specifier(args: argparse.Namespace):
     while True:
         if args.spec:
@@ -81,9 +97,8 @@ def debug_parse_specifier(args: argparse.Namespace):
             break
 
 
+@command
 def info(args: argparse.Namespace) -> bool:
-    _logger.debug(f'info {args}')
-
     def print_target(target: str, prefix: str, value: Any):
         if target in args.targets:
             print(prefix + ':\t' + str(value))
@@ -98,9 +113,8 @@ def info(args: argparse.Namespace) -> bool:
     return True
 
 
+@command
 def extract(args: argparse.Namespace) -> bool:
-    _logger.debug(f"extract {args}")
-
     extract_text = not not args.text_file
     text_file: str = "stdout" if args.text_file == '-' else args.text_file
     text_file_stream = None if not extract_text else sys.stdout if text_file == "stdout" else open(args.output_file, mode='w+')
@@ -144,9 +158,8 @@ def extract(args: argparse.Namespace) -> bool:
     return True
 
 
+@command
 def edit(args: argparse.Namespace) -> bool:
-    _logger.debug(f"copy {args}")
-
     try:
         (filename, page_selector, password) = parse_file_specifier(args.file)
     except FileNotFoundError as e:
@@ -159,9 +172,9 @@ def edit(args: argparse.Namespace) -> bool:
     try:
         if args.select: page_selector = PageSelector.parse(args.select)
         # open in file
-        file = PdfFile(filename, page_selector, args.password or password)
+        file = PdfFile(filename, page_selector, args.decrypt_password or password)
         # open out file
-        out = PdfFile(output_file, owner=file)
+        out = PdfFile(output_file, source_file=file)
 
         # open writer
         with file.get_reader(), out.get_writer() as writer:
@@ -189,8 +202,8 @@ def edit(args: argparse.Namespace) -> bool:
 
             if args.copy_metadata:
                 out.copy_metadata_from_owner()
-            if (args.copy_password and file.password) or args.owner_password:
-                out.encrypt(args.owner_password, args.password)
+            if args.encrypt or args.encrypt_password or args.encrypt_owner_password:
+                out.encrypt(args.encrypt_owner_password, args.encrypt_password)
 
         if file.path == out.path:
             _logger.info(f"edited file {repr(filename)} ({util.pluralize(page_count, 'page')})")
@@ -212,9 +225,8 @@ def edit(args: argparse.Namespace) -> bool:
     return True
 
 
+@command
 def split(args: argparse.Namespace) -> bool:
-    _logger.debug(f'split {args}')
-
     if len(args.select) <= 1:
         _logger.warn("only one selector provided; this action will only create one file which is more idiomatically "
                      "achieved with the `copy` command")
@@ -230,14 +242,14 @@ def split(args: argparse.Namespace) -> bool:
 
     try:
         # input file
-        file = PdfFile(filename, page_spec, args.password or password)
+        file = PdfFile(filename, page_spec, args.decrypt_password or password)
         with file.get_reader():
             for i in range(len(args.select)):
                 selector = PageSelector.parse(args.select[i])
                 ofp = template.format(dir=str(fp.parent) + os.sep, name=fp.stem, ext=fp.suffix,
                                                         i=i+1)
                 # output file
-                outfile = PdfFile(ofp, owner=file)
+                outfile = PdfFile(ofp, source_file=file)
 
                 with outfile.get_writer() as writer:
                     # copy selected pages
@@ -246,8 +258,8 @@ def split(args: argparse.Namespace) -> bool:
 
                     if args.copy_metadata:
                         outfile.copy_metadata_from_owner()
-                    if (args.copy_password and file.password) or args.owner_password:
-                        outfile.encrypt(args.owner_password, args.password)
+                    if args.encrypt or args.encrypt_password or args.encrypt_owner_password:
+                        outfile.encrypt(args.encrypt_owner_password, args.encrypt_password)
 
                 _logger.info(f"wrote to {repr(str(outfile.path))}")
     except WrongPasswordError as e:
@@ -263,9 +275,8 @@ def split(args: argparse.Namespace) -> bool:
     return True
 
 
+@command
 def explode(args: argparse.Namespace) -> bool:
-    _logger.debug(f"explode {args}")
-
     count: int = args.count
     if count < 1:
         _logger.err("count must be >= 1")
@@ -280,15 +291,17 @@ def explode(args: argparse.Namespace) -> bool:
     template = args.output_file_template
 
     try:
-        file = PdfFile(filename, args.select or page_selector, args.password or password)
+        file = PdfFile(filename, args.select or page_selector, args.decrypt_password or password)
         with (file.get_reader()):
             file_count = file.get_page_count() // count
             outfiles: list[PdfFile] = []
             page_limit = file_count * count
+
             # create files
             for i in range(file_count):
                 fp = template.format(dir=str(file.path.parent) + os.sep, name=file.path.stem, ext=file.path.suffix, i=i+1)
-                outfiles.append(PdfFile(fp, owner=file))
+                outfiles.append(PdfFile(fp, source_file=file))
+
             # write pages to file
             file_idx = 0
             for i, page in enumerate(file.get_pages()):
@@ -297,12 +310,13 @@ def explode(args: argparse.Namespace) -> bool:
                     file_idx += 1
                 if i+1 >= page_limit:
                     break
+
             # close file writers
             for out in outfiles:
                 if args.copy_metadata:
                     out.copy_metadata_from_owner()
-                if (args.copy_password and file.password) or args.owner_password:
-                    out.encrypt(args.owner_password, args.password,)
+                if args.encrypt or args.encrypt_password or args.encrypt_owner_password:
+                    out.encrypt(args.encrypt_owner_password, args.encrypt_password)
 
                 out.close_writer()
     except WrongPasswordError as e:
@@ -318,9 +332,8 @@ def explode(args: argparse.Namespace) -> bool:
     return True
 
 
+@command
 def merge(args: argparse.Namespace) -> bool:
-    _logger.debug(f"merge {args}")
-
     if len(args.file) < 1:
         _logger.err("need more than one input file")
         return False
@@ -334,11 +347,11 @@ def merge(args: argparse.Namespace) -> bool:
         _logger.err(e.args[0])
         return False
 
-    outfile = PdfFile(args.output_file, owner=None)
+    outfile = PdfFile(args.output_file, source_file=None)
 
     with outfile.get_writer() as writer:
         for fsp in fsps:
-            file = PdfFile(fsp[0], selector=fsp[1], password=fsp[2] or args.password)
+            file = PdfFile(fsp[0], selector=fsp[1], password=fsp[2] or args.decrypt_password)
             pages_written = 0
             with file.get_reader():
                 for page in file.get_pages():
