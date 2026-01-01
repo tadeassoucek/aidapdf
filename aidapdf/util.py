@@ -1,5 +1,6 @@
 import subprocess
 import os
+from datetime import datetime
 from typing import Optional, Any
 
 from aidapdf.config import Config
@@ -26,3 +27,7 @@ def open_file_with_default_program(filepath: str | os.PathLike):
 
 def pluralize(n: int, noun: str) -> str:
     return f"{n} {noun}" + ("s" if n > 1 else "")
+
+
+def format_date(date: datetime) -> str:
+    return date.strftime('on %b %d %Y at %I:%M')

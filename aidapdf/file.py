@@ -1,3 +1,4 @@
+from datetime import datetime
 import sys
 from contextlib import contextmanager
 from os import path, PathLike
@@ -8,7 +9,8 @@ import pypdf
 from pypdf import PdfReader, PageObject, PdfWriter
 from pypdf.generic import IndirectObject
 
-from aidapdf.config import Config
+from aidapdf import util
+from aidapdf.config import Config, ansicolor
 from aidapdf.log import Logger
 from aidapdf.pageselector import PageSelector
 from aidapdf.util import repr_password
@@ -75,6 +77,17 @@ class PdfFile:
         self._writer: Optional[PdfWriter] = None
         self._writer_open = False
 
+        self.title: Optional[str] = None
+        self.author: Optional[str] = None
+        self.subject: Optional[str] = None
+        self.keywords: Optional[list[str]] = None
+        self.creator: Optional[str] = None
+        """Program that created the document."""
+        self.producer: Optional[str] = None
+        """Program that converted the document to PDF."""
+        self.creation_date: Optional[datetime] = None
+        self.modified_date: Optional[datetime] = None
+
         self._logger = Logger(repr(self), parent=_logger)
         self._logger.debug("created")
 
@@ -91,6 +104,7 @@ class PdfFile:
                 # password is incorrect
                 self._logger.err("incorrect password")
                 try:
+                    # read password
                     self.password = getpass(f"Password to read file {repr(str(self.path))}: ")
                 except (EOFError, KeyboardInterrupt):
                     sys.exit(1)
@@ -99,7 +113,36 @@ class PdfFile:
                 encrypted = False
                 self._logger.info("decrypted successfully")
         self._reader_open = True
+        self._derive_basic_metadata()
         self._logger.debug("reader opened")
+
+    @staticmethod
+    def _parse_datetime(key: str, raw: str) -> Optional[datetime]:
+        if not raw: return None
+        raw = raw.strip()
+        timezone_stripped = False
+        # strip timezone
+        if raw.endswith("Z00'00'"):
+            raw = raw[:-7]
+            timezone_stripped = True
+        try:
+            return datetime.strptime(raw, "D:%Y%m%d%H%M%S" + ('%z' if not timezone_stripped else ''))
+        except ValueError:
+            _logger.warn(f"'{key}' is not a valid date: {repr(raw)}")
+
+    def _derive_basic_metadata(self) -> None:
+        self._ensure_reader_open()
+        metadata = self.get_metadata(resolve=True)
+        self.title = metadata.get('/Title', None)
+        self.author = metadata.get('/Author', None)
+        self.subject = metadata.get('/Subject', None)
+        self.keywords = metadata.get('/Keywords', None)
+        self.creator = metadata.get('/Creator', None)
+        self.producer = metadata.get('/Producer', None)
+        creation_date = metadata.get('/CreationDate', None)
+        self.creation_date = self._parse_datetime('/CreationDate', creation_date)
+        modified_date = metadata.get('/ModDate', None)
+        self.modified_date = self._parse_datetime('/ModDate', modified_date)
 
     @contextmanager
     def get_reader(self) -> Generator[PdfReader, None, None]:
@@ -257,6 +300,10 @@ class PdfFile:
             return meta_raw
 
     def get_permissions(self) -> Optional[dict[str, bool]]:
+        """
+        Return the permissions of the file as dictionary of {'permission_name': bool}. The reader has to be opened.
+        """
+
         self._ensure_reader_open()
         permissions = self._reader.user_access_permissions
         if permissions is None: return None
@@ -308,6 +355,39 @@ class PdfFile:
         else:
             for i in selector.bake(self):
                 yield self._reader.get_page(i)
+
+    def __str__(self) -> str:
+        color_value = lambda v: ansicolor(v, stream=sys.stdout, fg=Config.COLOR_VALUE)
+        text = f"PDF file at {color_value(repr(str(self.path)))}"
+        if self._reader_open:
+            if self._reader.is_encrypted:
+                text += " (encrypted)"
+            else:
+                text += " (unencrypted)"
+        text += '.\n'
+        if self.title:
+            text += repr(self.title)
+        if self.author:
+            if self.title:
+                text += ' by '
+            else:
+                text += 'By '
+            text += color_value(self.author)
+        if self.creator or self.creation_date or self.modified_date:
+            if self.title or self.author:
+                text += ' (created '
+            else:
+                text += 'Created '
+            if self.creator:
+                text += f'in {color_value(self.creator)} '
+            if self.creation_date:
+                text += f'{color_value(util.format_date(self.creation_date))}'
+            if self.modified_date:
+                text += f'; last modified {color_value(util.format_date(self.modified_date))}'
+            if self.title or self.author:
+                text += ')'
+            text += '.'
+        return text
 
     def __repr__(self) -> str:
         return f"PdfFile({repr(str(self.path))})"

@@ -24,8 +24,9 @@ def command(fn: Callable[[argparse.Namespace], bool]) -> Callable[[argparse.Name
             # censor passwords
             if k.endswith('password'):
                 v = util.str_password(v)
-            treated_args[k] = v
-        _logger.debug(fn.__name__ + ' ' + str(treated_args))
+            if k != "func":
+                treated_args[k] = v
+        _logger.debug(f"COMMAND {fn.__name__} {treated_args}")
         return fn(args)
     return wrap
 
@@ -39,7 +40,7 @@ def version(args: argparse.Namespace):
 
 
 @command
-def debug_testlog(_: argparse.Namespace) -> None:
+def debug_testlog(_) -> None:
     _logger.debug("message")
     _logger.info("message")
     _logger.warn("message")
@@ -99,13 +100,25 @@ def debug_parse_specifier(args: argparse.Namespace):
 
 @command
 def info(args: argparse.Namespace) -> bool:
-    def print_target(target: str, prefix: str, value: Any):
+    def print_target(target: str, prefix: str, v: Any):
         if target in args.targets:
-            print(prefix + ':\t' + str(value))
+            if type(v) == dict:
+                if args.terse:
+                    value_text = str(v)
+                else:
+                    value_text = ""
+                    for i, (k, v) in enumerate(v.items()):
+                        value_text += f"\n\t[{i}] {repr(k)}: {repr(v)}"
+            else:
+                value_text = str(v)
+            print(prefix + ': ' + value_text)
 
-    file = PdfFile(*parse_file_specifier(args.file))
-    with file.get_reader():
+    path, selector, password = parse_file_specifier(args.file)
+    file = PdfFile(path, selector, args.decrypt_password or password)
+    with file.get_reader() as reader:
         pages = file.get_page_count()
+        if not args.terse:
+            print(str(file))
         print_target("pages", "Pages", pages)
         print_target("metadata", "Metadata", file.get_metadata(resolve=True))
         print_target("permissions", "Permissions", file.get_permissions())

@@ -4,7 +4,7 @@ from typing import Optional
 
 import colors
 
-from aidapdf.config import Config
+from aidapdf.config import Config, ansicolor
 
 
 class Logger:
@@ -24,13 +24,6 @@ class Logger:
         3: "gray",
     }
 
-    @staticmethod
-    def _color(text: str, *args, **kwargs) -> str:
-        if Config.COLOR and sys.stderr.isatty():
-            return colors.color(text, *args, **kwargs)
-        else:
-            return text
-
     def __init__(self, name: str, parent: Optional['Logger'] = None):
         self.name = name.replace('aidapdf.', '')
         self.parent = parent
@@ -39,8 +32,8 @@ class Logger:
     def _log(self, message: str, level: int) -> None:
         if level <= Config.VERBOSITY_LEVEL:
             prefix = f"{Logger.LEVELS[level]}:{self._name}"
-            print(Logger._color(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +
-                  Logger._color(message, fg='white'), file=sys.stderr)
+            print(ansicolor(prefix, fg=Logger.LEVEL_COLORS[level], style='bold') + '  ' +
+                  ansicolor(message, fg='white'), file=sys.stderr)
 
     def debug(self, message: str) -> None:
         self._log(message, 3)

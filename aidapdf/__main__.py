@@ -56,6 +56,10 @@ def main():
 
     info_command = sub.add_parser("info", aliases=['i'], help="print info about the PDF file")
     info_command.add_argument("file", help="the PDF file")
+    info_command.add_argument('--decrypt-password', '--dpass', nargs='?',
+                              help="password used to decrypt the input file. overrides the 'password' part of the "
+                                   "input file specifier. ignored if the input file is not encrypted.")
+    info_command.add_argument('-t', '--terse', action='store_true')
     group = info_command.add_mutually_exclusive_group(required=False)
     group.add_argument("-a", "--all", dest="targets", action="store_const",
                        const=["pages", "metadata"], default=["pages", "metadata", "permissions"],

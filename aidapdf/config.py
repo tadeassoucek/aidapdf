@@ -1,10 +1,16 @@
 import argparse
 import platform
+import sys
 from typing import Optional, Literal
+
+import colors
 
 
 class Config:
     COLOR = False
+
+    COLOR_VALUE = 'cyan'
+
     VERBOSITY_LEVEL = 2
     RAW_FILENAMES = False
     PLATFORM: Optional[Literal["macOS", "Windows"]] = None
@@ -37,3 +43,10 @@ class Config:
     def to_str() -> str:
         return (f"config.platform = {repr(Config.PLATFORM or 'other')}, config.color = {Config.COLOR}, "
                 f"config.raw_filenames = {Config.RAW_FILENAMES}, config.verbosity_level = {Config.VERBOSITY_LEVEL}")
+
+
+def ansicolor(text: str, stream=sys.stderr, *args, **kwargs) -> str:
+    if Config.COLOR and stream.isatty():
+        return colors.color(text, *args, **kwargs)
+    else:
+        return text
