@@ -15,4 +15,5 @@
 - [ ] Add checks for file creation errors.
 - [ ] Add an OCR option.
 - [ ] Add unit tests.
-- [ ] Improve `info` command.
+- [x] Improve `info` command.
+- [ ] Handle `KeyboardInterrupt`s properly.
